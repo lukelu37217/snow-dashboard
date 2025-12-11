@@ -1,0 +1,212 @@
+/* Apple-style Glassmorphism Design System */
+
+/* Typography - San Francisco/Inter style */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+* {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Glassmorphism Base Classes */
+.glass-card {
+    background: rgba(30, 30, 30, 0.75);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.glass-card-light {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Dark Mode Color Palette */
+:root {
+    --bg-primary: rgba(18, 18, 18, 0.95);
+    --bg-secondary: rgba(30, 30, 30, 0.85);
+    --bg-tertiary: rgba(45, 45, 45, 0.75);
+    --text-primary: rgba(255, 255, 255, 0.95);
+    --text-secondary: rgba(255, 255, 255, 0.65);
+    --text-tertiary: rgba(255, 255, 255, 0.4);
+    --accent-blue: #0A84FF;
+    --accent-green: #32D74B;
+    --accent-orange: #FF9F0A;
+    --accent-red: #FF453A;
+    --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+/* Map Labels - Dark Glass Style */
+.snow-label {
+    background: rgba(30, 30, 30, 0.85) !important;
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #ffffff !important;
+    padding: 4px 8px !important;
+}
+
+/* Map Labels - 4-Level Threshold System */
+/* Level 1: Trace (Green zone with salting watch) */
+.snow-label-trace {
+    background: rgba(34, 197, 94, 0.9) !important;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: 6px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #ffffff !important;
+    padding: 3px 6px !important;
+    font-style: italic;
+}
+
+/* Level 2: Residential (Orange - 1-4.9cm) */
+.snow-label-residential {
+    background: rgba(245, 158, 11, 0.95) !important;
+    backdrop-filter: blur(8px);
+    border: 2px solid rgba(255, 255, 255, 0.5) !important;
+    border-radius: 6px !important;
+    box-shadow: 0 3px 12px rgba(245, 158, 11, 0.4) !important;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #ffffff !important;
+    padding: 4px 8px !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Level 3: Commercial (Red - >=5cm) */
+.snow-label-commercial {
+    background: rgba(239, 68, 68, 0.95) !important;
+    backdrop-filter: blur(8px);
+    border: 2px solid rgba(255, 255, 255, 0.6) !important;
+    border-radius: 6px !important;
+    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.5) !important;
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: #ffffff !important;
+    padding: 5px 10px !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    animation: pulse-alert 2s infinite;
+}
+
+@keyframes pulse-alert {
+    0%, 100% { box-shadow: 0 4px 16px rgba(239, 68, 68, 0.5); }
+    50% { box-shadow: 0 4px 24px rgba(239, 68, 68, 0.8); }
+}
+
+/* Smooth radar animation transitions */
+.radar-layer-smooth {
+    transition: opacity 0.3s ease-in-out !important;
+}
+
+.radar-layer-smooth img {
+    transition: opacity 0.3s ease-in-out !important;
+}
+
+/* Leaflet tile fade-in animation */
+.leaflet-tile {
+    transition: opacity 0.2s ease-in !important;
+}
+
+/* Smooth scrollbar styling (macOS-like) */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Typography Hierarchy */
+.metric-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+    letter-spacing: -0.02em;
+}
+
+.metric-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Smooth transitions for all interactive elements */
+button, a, .clickable {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Focus states - accessibility */
+button:focus-visible, a:focus-visible {
+    outline: 2px solid var(--accent-blue);
+    outline-offset: 2px;
+}
+
+/* Horizontal scroll container - iOS-style */
+.horizontal-scroll {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    gap: 12px;
+    padding: 16px;
+}
+
+.horizontal-scroll::-webkit-scrollbar {
+    height: 4px;
+}
+
+/* Card hover effects */
+.interactive-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.interactive-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Loading shimmer effect */
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+.shimmer {
+    animation: shimmer 2s infinite;
+    background: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0.05) 0%,
+        rgba(255, 255, 255, 0.15) 50%,
+        rgba(255, 255, 255, 0.05) 100%
+    );
+    background-size: 1000px 100%;
+}
