@@ -7,6 +7,7 @@ import GlobalForecastBar from './components/Weather/GlobalForecastBarApple';
 import Header from './components/Dashboard/Header';
 import AlertPanel from './components/Dashboard/AlertPanel';
 import MetricsCards from './components/Dashboard/MetricsCards';
+import { LayersIcon } from './components/Icons/Icons';
 
 import { getCentroid } from './services/geoUtils';
 import {
@@ -16,7 +17,11 @@ import {
   type WeatherData,
   type HybridWeatherResult
 } from './services/weatherService';
-import { type RealTimeObservation } from './services/weatherCanadaService';
+import { 
+  type RealTimeObservation, 
+  type ECForecastData,
+  getHourlyForecast 
+} from './services/weatherCanadaService';
 
 // Simple guard to prevent overlapping refresh cycles
 let isRefreshing = false;
@@ -27,6 +32,9 @@ function App() {
 
   // Winnipe City-Wide Hybrid Result
   const [cityWeather, setCityWeather] = useState<HybridWeatherResult | null>(null);
+  
+  // Weather Canada hourly forecast
+  const [ecForecast, setEcForecast] = useState<ECForecastData | null>(null);
 
   const [selectedFeature, setSelectedFeature] = useState<any>(null);
   const [showRadar, setShowRadar] = useState(false);
@@ -72,6 +80,10 @@ function App() {
       // Center of Winnipeg approx
       const hybrid = await fetchCommunityWeather(49.8951, -97.1384, forceRefresh);
       setCityWeather(hybrid);
+
+      // 4. Fetch Weather Canada hourly forecast for the forecast bar
+      const ecHourly = await getHourlyForecast();
+      setEcForecast(ecHourly);
 
       setLastUpdated(new Date().toLocaleTimeString());
 
@@ -170,16 +182,32 @@ function App() {
             left: '60px',
             zIndex: 1000,
             backgroundColor: 'white',
-            borderRadius: '4px',
+            borderRadius: '8px',
             border: '2px solid rgba(0,0,0,0.2)',
             cursor: 'pointer',
-            padding: '5px 10px',
-            fontWeight: 'bold',
-            fontSize: '0.9rem'
+            padding: '8px 14px',
+            fontWeight: 600,
+            fontSize: '0.85rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            transition: 'all 0.2s ease'
           }}
             onClick={() => setShowRadar(!showRadar)}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#f1f5f9';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'white';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
           >
-            {showRadar ? '📡 Hide Radar' : '📡 Show Radar'}
+            <LayersIcon size={18} color={showRadar ? '#3b82f6' : '#64748b'} />
+            <span style={{ color: showRadar ? '#3b82f6' : '#1e293b' }}>
+              {showRadar ? 'Hide Radar' : 'Show Radar'}
+            </span>
           </div>
 
           <SnowMap
@@ -193,6 +221,7 @@ function App() {
             <GlobalForecastBar 
               forecast={cityWeather?.forecast || null} 
               realtime={realTimeProp as RealTimeObservation | null}
+              ecForecast={ecForecast}
             />
           </div>
         </div>
@@ -203,6 +232,8 @@ function App() {
         <NeighborhoodDetail
           name={selectedFeature.properties.name}
           data={getSelectedData()}
+          forecast={cityWeather?.forecast || null}
+          ecForecast={ecForecast}
           onClose={() => setSelectedFeature(null)}
         />
       )}

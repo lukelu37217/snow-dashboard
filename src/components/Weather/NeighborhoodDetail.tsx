@@ -5,35 +5,87 @@
  * Section B (Bottom): THE FORECAST (Future 24h) - Prediction
  * 
  * NO TABS - Both sections visible simultaneously for dispatch decisions
+ * 
+ * Data Sources:
+ * - Open-Meteo: Precise hourly snowfall (cm) for charts and calculations
+ * - Weather Canada (EC): Real-time conditions, alerts, general conditions
  */
 
 import React from 'react';
-import { CloseIcon, LocationIcon, SnowIcon, TemperatureIcon, WindIcon, AlertIcon } from '../Icons/Icons';
+import { CloseIcon, LocationIcon, SnowIcon, TemperatureIcon, WindIcon, AlertIcon, ClockIcon, StopwatchIcon } from '../Icons/Icons';
 import type { WeatherData, DetailedForecast } from '../../services/weatherService';
+import type { ECForecastData } from '../../services/weatherCanadaService';
 
 interface NeighborhoodDetailProps {
     name: string;
     data: WeatherData | undefined;
     forecast?: DetailedForecast | null;
+    ecForecast?: ECForecastData | null; // Weather Canada hourly forecast
     onClose: () => void;
 }
 
-const NeighborhoodDetail: React.FC<NeighborhoodDetailProps> = ({ name, data, forecast, onClose }) => {
+const NeighborhoodDetail: React.FC<NeighborhoodDetailProps> = ({ name, data, forecast, ecForecast, onClose }) => {
     if (!name) return null;
 
-    // Calculate future 24h snowfall from forecast
+    // Calculate future 24h snowfall from Open-Meteo forecast (precise cm data)
     const calculateFuture24hSnow = (): number => {
         if (!forecast?.hourly?.snowfall) return 0;
-        const next24h = forecast.hourly.snowfall.slice(0, 24);
+        const currentHour = new Date().getHours();
+        const next24h = forecast.hourly.snowfall.slice(currentHour, currentHour + 24);
         return next24h.reduce((sum, val) => sum + (val || 0), 0);
     };
 
-    // Calculate "Snow Stop" time from hourly forecast
-    const calculateSnowStopTime = (): string => {
-        if (!forecast?.hourly?.snowfall) return "—";
+    // Calculate current snowfall rate from Open-Meteo (cm/h)
+    const getCurrentSnowRate = (): number => {
+        if (!forecast?.hourly?.snowfall) return 0;
+        const currentHour = new Date().getHours();
+        return forecast.hourly.snowfall[currentHour] || 0;
+    };
 
+    // Calculate "Snow Stop" time - HYBRID approach
+    // Uses Weather Canada condition text if available, falls back to Open-Meteo snowfall data
+    const calculateSnowStopTime = (): string => {
         const now = new Date();
         const currentHour = now.getHours();
+
+        // Try Weather Canada hourly forecast first (more accurate conditions)
+        if (ecForecast?.hourlyForecasts?.length) {
+            let isCurrentlySnowing = false;
+            
+            for (let i = 0; i < Math.min(ecForecast.hourlyForecasts.length, 48); i++) {
+                const hourData = ecForecast.hourlyForecasts[i];
+                const condition = hourData.condition.toLowerCase();
+                const isSnowCondition = condition.includes('snow') || 
+                                        condition.includes('flurr') || 
+                                        condition.includes('blizzard');
+                const hasHighPrecipChance = hourData.precipChance > 30;
+                
+                if (isSnowCondition && hasHighPrecipChance) {
+                    isCurrentlySnowing = true;
+                }
+                
+                // Found the transition point: was snowing, now it's not
+                if (isCurrentlySnowing && (!isSnowCondition || hourData.precipChance < 20)) {
+                    const stopTime = new Date(hourData.timestamp);
+                    const stopHour = stopTime.getHours();
+                    const isToday = stopTime.getDate() === now.getDate();
+                    const dayLabel = isToday ? 'Today' : 'Tomorrow';
+                    return `${dayLabel} ${String(stopHour).padStart(2, '0')}:00`;
+                }
+            }
+            
+            if (isCurrentlySnowing) return "Ongoing (24h+)";
+            
+            // Check if any snow is expected
+            const hasAnySnow = ecForecast.hourlyForecasts.some(h => 
+                (h.condition.toLowerCase().includes('snow') || h.condition.toLowerCase().includes('flurr')) 
+                && h.precipChance > 30
+            );
+            if (!hasAnySnow) return "Clear";
+        }
+
+        // Fallback to Open-Meteo snowfall data
+        if (!forecast?.hourly?.snowfall) return "—";
 
         const hasAnySnow = forecast.hourly.snowfall.some(s => s > 0.01);
         if (!hasAnySnow) return "Clear";
@@ -53,6 +105,14 @@ const NeighborhoodDetail: React.FC<NeighborhoodDetailProps> = ({ name, data, for
 
         if (!isCurrentlySnowing) return "Clear";
         return "Ongoing (24h+)";
+    };
+
+    // Get current condition text from Weather Canada
+    const getCurrentCondition = (): string => {
+        if (ecForecast?.hourlyForecasts?.length) {
+            return ecForecast.hourlyForecasts[0].condition;
+        }
+        return data?.snowfall && data.snowfall > 0 ? "Snowing" : "Clear";
     };
 
     // Get threshold level description
@@ -87,6 +147,8 @@ const NeighborhoodDetail: React.FC<NeighborhoodDetailProps> = ({ name, data, for
     const future24hSnow = calculateFuture24hSnow();
     const snowStopTime = calculateSnowStopTime();
     const thresholdStatus = getThresholdStatus(snow24h);
+    const currentSnowRate = getCurrentSnowRate();
+    const currentCondition = getCurrentCondition();
     
     // Progress to 5cm threshold
     const progressTo5cm = Math.min((snow24h / 5) * 100, 100);
@@ -334,18 +396,45 @@ const NeighborhoodDetail: React.FC<NeighborhoodDetailProps> = ({ name, data, for
                                 </div>
                             </div>
                             <div style={{
-                                backgroundColor: '#f8fafc',
+                                backgroundColor: currentSnowRate > 0 ? '#ede9fe' : '#f8fafc',
                                 padding: '10px',
                                 borderRadius: '8px',
-                                textAlign: 'center'
+                                textAlign: 'center',
+                                border: currentSnowRate > 0.5 ? '2px solid #8b5cf6' : 'none'
                             }}>
-                                <SnowIcon size={18} color="#8b5cf6" />
-                                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1e293b' }}>
-                                    {data.snowfall.toFixed(1)}
+                                <SnowIcon size={18} color={currentSnowRate > 0 ? '#8b5cf6' : '#94a3b8'} />
+                                <div style={{ 
+                                    fontSize: '1.1rem', 
+                                    fontWeight: 700, 
+                                    color: currentSnowRate > 0 ? '#7c3aed' : '#64748b' 
+                                }}>
+                                    {currentSnowRate.toFixed(1)}
                                 </div>
-                                <div style={{ fontSize: '0.65rem', color: '#64748b' }}>cm/h now</div>
+                                <div style={{ fontSize: '0.65rem', color: '#64748b' }}>
+                                    {currentSnowRate > 0 ? 'cm/h now' : 'cm/h (Est.)'}
+                                </div>
                             </div>
                         </div>
+                        
+                        {/* Current Condition from Weather Canada */}
+                        {currentCondition && currentCondition !== 'Clear' && (
+                            <div style={{
+                                marginTop: '12px',
+                                padding: '8px 12px',
+                                backgroundColor: '#f1f5f9',
+                                borderRadius: '8px',
+                                fontSize: '0.8rem',
+                                color: '#475569',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}>
+                                <span style={{ fontSize: '1rem' }}>🍁</span>
+                                <span>
+                                    <strong>EC:</strong> {currentCondition}
+                                </span>
+                            </div>
+                        )}
                     </div>
 
                     {/* ═══════════════════════════════════════════════════════════════ */}
@@ -450,8 +539,12 @@ const NeighborhoodDetail: React.FC<NeighborhoodDetailProps> = ({ name, data, for
                                     fontSize: '0.7rem',
                                     color: '#64748b',
                                     marginBottom: '6px',
-                                    fontWeight: 500
+                                    fontWeight: 500,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
                                 }}>
+                                    <StopwatchIcon size={14} color="#64748b" />
                                     Snow Ends At
                                 </div>
                                 <div style={{

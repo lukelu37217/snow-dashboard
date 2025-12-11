@@ -1,11 +1,16 @@
 /**
  * Apple-Style Global Forecast Bar
  * Features: Glassmorphism, Horizontal Scroll, Phosphor Icons, Smooth Animations
+ * 
+ * Data Sources:
+ * - 24h forecast: Weather Canada City Page Weather API (primary)
+ * - 7d forecast: Open-Meteo API (fallback, as Weather Canada only provides ~48h hourly)
+ * - Real-time: Weather Canada SWOB API
  */
 
 import React, { useState, useRef } from 'react';
 import { 
-  Snowflake, 
+
   Wind, 
   CloudSnow, 
   Sun, 
@@ -18,7 +23,8 @@ import {
   Drop
 } from 'phosphor-react';
 import type { DetailedForecast } from '../../services/weatherService';
-import type { RealTimeObservation } from '../../services/weatherCanadaService';
+import type { RealTimeObservation, ECForecastData } from '../../services/weatherCanadaService';
+import { ecIconToWmoCode } from '../../services/weatherCanadaService';
 
 interface ForecastSelection {
   type: 'hour' | 'day';
@@ -32,10 +38,11 @@ interface ForecastSelection {
 interface GlobalForecastBarProps {
   forecast: DetailedForecast | null;
   realtime?: RealTimeObservation | null; // Real-time from Weather Canada
+  ecForecast?: ECForecastData | null;    // Hourly forecast from Weather Canada
   onTimeSelect?: (selection: ForecastSelection) => void;
 }
 
-const GlobalForecastBar: React.FC<GlobalForecastBarProps> = ({ forecast, realtime, onTimeSelect }) => {
+const GlobalForecastBar: React.FC<GlobalForecastBarProps> = ({ forecast, realtime, ecForecast, onTimeSelect }) => {
   const [view, setView] = useState<'24h' | '7d'>('24h');
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -54,16 +61,22 @@ const GlobalForecastBar: React.FC<GlobalForecastBarProps> = ({ forecast, realtim
 
   const { hourly, current, daily } = forecast;
 
-  // 24H Data
+  // 24H Data - Use Weather Canada if available, otherwise fallback to Open-Meteo
+  const useWeatherCanada = ecForecast && ecForecast.hourlyForecasts.length >= 24;
+  
+  // Weather Canada hourly data (take first 24 hours)
+  const ecHours = useWeatherCanada ? ecForecast.hourlyForecasts.slice(0, 24) : [];
+  
+  // Open-Meteo fallback data
   const currentHour = new Date().getHours();
   const startIndex = currentHour;
-  const hours = hourly.time.slice(startIndex, startIndex + 24);
-  const temps = hourly.temperature_2m.slice(startIndex, startIndex + 24);
-  const snows = hourly.snowfall.slice(startIndex, startIndex + 24);
-  const winds = hourly.wind_gusts_10m ? hourly.wind_gusts_10m.slice(startIndex, startIndex + 24) : [];
-  const weatherCodes = hourly.weather_code ? hourly.weather_code.slice(startIndex, startIndex + 24) : [];
+  const omHours = hourly.time.slice(startIndex, startIndex + 24);
+  const omTemps = hourly.temperature_2m.slice(startIndex, startIndex + 24);
+  const omSnows = hourly.snowfall.slice(startIndex, startIndex + 24);
+  const omWinds = hourly.wind_gusts_10m ? hourly.wind_gusts_10m.slice(startIndex, startIndex + 24) : [];
+  const omWeatherCodes = hourly.weather_code ? hourly.weather_code.slice(startIndex, startIndex + 24) : [];
 
-  // 7D Data
+  // 7D Data (always from Open-Meteo as Weather Canada doesn't provide daily summaries)
   const days = daily.time;
   const dailyWeatherCodes = daily.weather_code || [];
 
@@ -154,12 +167,12 @@ const GlobalForecastBar: React.FC<GlobalForecastBarProps> = ({ forecast, realtim
     if (code >= 71 && code <= 75) {
       if (code === 75) return <CloudSnow size={size} weight="fill" color="#3b82f6" />; // Heavy
       if (code === 73) return <CloudSnow size={size} weight="regular" color="#60a5fa" />; // Moderate
-      return <Snowflake size={size} weight="thin" color="#93c5fd" />; // Light
+      return <CloudSnow size={size} weight="thin" color="#93c5fd" />; // Light
     }
     
     // Snow grains
     if (code === 77) {
-      return <Snowflake size={size} weight="duotone" color="#94a3b8" />;
+      return <CloudSnow size={size} weight="duotone" color="#94a3b8" />;
     }
     
     // Rain showers
@@ -230,7 +243,7 @@ const GlobalForecastBar: React.FC<GlobalForecastBarProps> = ({ forecast, realtim
         {realtime && (
           <div style={styles.sourceLabel}>
             <span style={{ fontSize: '0.65rem', color: '#64748b' }}>
-              🌡️ Live from {realtime.station?.split(' (')[0] || 'Weather Canada'}
+              🌡️ Live from YWG
             </span>
           </div>
         )}
@@ -257,12 +270,15 @@ const GlobalForecastBar: React.FC<GlobalForecastBarProps> = ({ forecast, realtim
           <button
             style={{ ...styles.tab, ...(view === '24h' ? styles.tabActive : {}) }}
             onClick={() => setView('24h')}
+            title={useWeatherCanada ? 'Source: Environment Canada' : 'Source: Open-Meteo'}
           >
             24-Hour
+            {useWeatherCanada && <span style={{ marginLeft: '4px', fontSize: '9px', color: '#16a34a' }}>🍁</span>}
           </button>
           <button
             style={{ ...styles.tab, ...(view === '7d' ? styles.tabActive : {}) }}
             onClick={() => setView('7d')}
+            title="Source: Open-Meteo"
           >
             7-Day
           </button>
@@ -272,81 +288,162 @@ const GlobalForecastBar: React.FC<GlobalForecastBarProps> = ({ forecast, realtim
         <div ref={scrollRef} style={styles.scrollContainer}>
           {view === '24h' && (
             <>
-              {/* Hour Cards */}
-              {hours.map((time, i) => {
-                const date = new Date(time);
-                const hourLabel = date.getHours();
-                const temp = temps[i];
-                const snow = snows[i];
-                const wind = winds[i] || 0;
-                const weatherCode = weatherCodes[i];
-                const barHeight = Math.min(snow * 8, 60);
-                const isNow = i === 0;
-                const isSelected = view === '24h' && selectedIndex === i;
-                const timeStr = hourLabel === 0 ? '12 AM' : hourLabel < 12 ? `${hourLabel} AM` : hourLabel === 12 ? '12 PM' : `${hourLabel - 12} PM`;
-                const weatherDesc = getWeatherDescription(weatherCode);
+              {/* Hour Cards - Use Weather Canada data if available */}
+              {useWeatherCanada ? (
+                // Weather Canada Forecast
+                ecHours.map((ecHour, i) => {
+                  const date = new Date(ecHour.timestamp);
+                  const hourLabel = date.getHours();
+                  const temp = ecHour.temperature;
+                  const wind = ecHour.windSpeed || 0;
+                  const windGust = ecHour.windGust || wind;
+                  const weatherCode = ecIconToWmoCode(ecHour.iconCode);
+                  const precipChance = ecHour.precipChance;
+                  const isNow = i === 0;
+                  const isSelected = view === '24h' && selectedIndex === i;
+                  const timeStr = hourLabel === 0 ? '12 AM' : hourLabel < 12 ? `${hourLabel} AM` : hourLabel === 12 ? '12 PM' : `${hourLabel - 12} PM`;
+                  const weatherDesc = ecHour.condition;
+                  const isSnowy = ecHour.condition.toLowerCase().includes('snow') || ecHour.condition.toLowerCase().includes('flurr');
 
-                const handleClick = () => {
-                  setSelectedIndex(i);
-                  onTimeSelect?.({
-                    type: 'hour',
-                    index: i,
-                    time: timeStr,
-                    temp,
-                    snow,
-                    wind
-                  });
-                };
+                  const handleClick = () => {
+                    setSelectedIndex(i);
+                    onTimeSelect?.({
+                      type: 'hour',
+                      index: i,
+                      time: timeStr,
+                      temp,
+                      snow: isSnowy && precipChance > 30 ? 0.5 : 0, // Estimate based on condition
+                      wind: windGust
+                    });
+                  };
 
-                return (
-                  <div
-                    key={time}
-                    onClick={handleClick}
-                    style={{ 
-                      ...styles.hourCard, 
-                      ...(isNow ? styles.hourCardNow : {}),
-                      ...(isSelected ? styles.hourCardSelected : {}),
-                      cursor: 'pointer'
-                    }}
-                    title={`${timeStr}: ${weatherDesc}, ${Math.round(temp)}°C, ${snow > 0 ? snow.toFixed(1) + 'cm snow, ' : ''}Wind ${Math.round(wind)}km/h`}
-                  >
-                    <div style={styles.hourTime}>{timeStr}</div>
-                    <div style={styles.hourIcon}>
-                      {getWeatherIconByCode(weatherCode, hourLabel, 32)}
+                  return (
+                    <div
+                      key={ecHour.timestamp}
+                      onClick={handleClick}
+                      style={{ 
+                        ...styles.hourCard, 
+                        ...(isNow ? styles.hourCardNow : {}),
+                        ...(isSelected ? styles.hourCardSelected : {}),
+                        cursor: 'pointer'
+                      }}
+                      title={`${timeStr}: ${weatherDesc}, ${Math.round(temp)}°C, ${precipChance}% precip, Wind ${Math.round(windGust)}km/h`}
+                    >
+                      <div style={styles.hourTime}>{timeStr}</div>
+                      <div style={styles.hourIcon}>
+                        {getWeatherIconByCode(weatherCode, hourLabel, 32)}
+                      </div>
+                      <div style={styles.hourTemp}>{Math.round(temp)}°</div>
+
+                      {/* Precipitation Chance Bar (instead of snow bar) */}
+                      <div style={styles.snowBarWrapper}>
+                        {precipChance > 0 ? (
+                          <div
+                            style={{
+                              ...styles.snowBar,
+                              height: `${Math.max(precipChance * 0.6, 4)}px`,
+                              background: isSnowy
+                                ? 'linear-gradient(180deg, #3b82f6 0%, #60a5fa 100%)'
+                                : 'linear-gradient(180deg, #60a5fa 0%, #93c5fd 100%)'
+                            }}
+                          />
+                        ) : (
+                          <div style={{ width: '100%', height: '1px', backgroundColor: '#cbd5e1' }} />
+                        )}
+                      </div>
+
+                      <div style={{
+                        ...styles.snowAmount,
+                        color: precipChance > 50 ? '#3b82f6' : '#94a3b8',
+                        fontSize: '10px'
+                      }}>
+                        {precipChance > 0 ? `${precipChance}%` : '—'}
+                      </div>
+
+                      <div style={styles.windSpeed}>
+                        <Wind size={12} weight="thin" color="#94a3b8" />
+                        <span style={{ marginLeft: '2px' }}>{Math.round(windGust)}</span>
+                      </div>
                     </div>
-                    <div style={styles.hourTemp}>{Math.round(temp)}°</div>
+                  );
+                })
+              ) : (
+                // Fallback: Open-Meteo Forecast
+                omHours.map((time, i) => {
+                  const date = new Date(time);
+                  const hourLabel = date.getHours();
+                  const temp = omTemps[i];
+                  const snow = omSnows[i];
+                  const wind = omWinds[i] || 0;
+                  const weatherCode = omWeatherCodes[i];
+                  const barHeight = Math.min(snow * 8, 60);
+                  const isNow = i === 0;
+                  const isSelected = view === '24h' && selectedIndex === i;
+                  const timeStr = hourLabel === 0 ? '12 AM' : hourLabel < 12 ? `${hourLabel} AM` : hourLabel === 12 ? '12 PM' : `${hourLabel - 12} PM`;
+                  const weatherDesc = getWeatherDescription(weatherCode);
 
-                    <div style={styles.snowBarWrapper}>
-                      {snow > 0 ? (
-                        <div
-                          style={{
-                            ...styles.snowBar,
-                            height: `${Math.max(barHeight, 4)}px`,
-                            background: snow > 2 
-                              ? 'linear-gradient(180deg, #3b82f6 0%, #60a5fa 100%)' 
-                              : 'linear-gradient(180deg, #60a5fa 0%, #93c5fd 100%)'
-                          }}
-                        />
-                      ) : (
-                        <div style={{ width: '100%', height: '1px', backgroundColor: '#cbd5e1' }} />
-                      )}
-                    </div>
+                  const handleClick = () => {
+                    setSelectedIndex(i);
+                    onTimeSelect?.({
+                      type: 'hour',
+                      index: i,
+                      time: timeStr,
+                      temp,
+                      snow,
+                      wind
+                    });
+                  };
 
-                    <div style={{
-                      ...styles.snowAmount,
-                      color: snow > 0 && snow < 0.1 ? '#94a3b8' : '#3b82f6',
-                      fontStyle: snow > 0 && snow < 0.1 ? 'italic' : 'normal'
-                    }}>
-                      {formatSnowAmount(snow)}
-                    </div>
+                  return (
+                    <div
+                      key={time}
+                      onClick={handleClick}
+                      style={{ 
+                        ...styles.hourCard, 
+                        ...(isNow ? styles.hourCardNow : {}),
+                        ...(isSelected ? styles.hourCardSelected : {}),
+                        cursor: 'pointer'
+                      }}
+                      title={`${timeStr}: ${weatherDesc}, ${Math.round(temp)}°C, ${snow > 0 ? snow.toFixed(1) + 'cm snow, ' : ''}Wind ${Math.round(wind)}km/h`}
+                    >
+                      <div style={styles.hourTime}>{timeStr}</div>
+                      <div style={styles.hourIcon}>
+                        {getWeatherIconByCode(weatherCode, hourLabel, 32)}
+                      </div>
+                      <div style={styles.hourTemp}>{Math.round(temp)}°</div>
 
-                    <div style={styles.windSpeed}>
-                      <Wind size={12} weight="thin" color="#94a3b8" />
-                      <span style={{ marginLeft: '2px' }}>{Math.round(wind)}</span>
+                      <div style={styles.snowBarWrapper}>
+                        {snow > 0 ? (
+                          <div
+                            style={{
+                              ...styles.snowBar,
+                              height: `${Math.max(barHeight, 4)}px`,
+                              background: snow > 2 
+                                ? 'linear-gradient(180deg, #3b82f6 0%, #60a5fa 100%)' 
+                                : 'linear-gradient(180deg, #60a5fa 0%, #93c5fd 100%)'
+                            }}
+                          />
+                        ) : (
+                          <div style={{ width: '100%', height: '1px', backgroundColor: '#cbd5e1' }} />
+                        )}
+                      </div>
+
+                      <div style={{
+                        ...styles.snowAmount,
+                        color: snow > 0 && snow < 0.1 ? '#94a3b8' : '#3b82f6',
+                        fontStyle: snow > 0 && snow < 0.1 ? 'italic' : 'normal'
+                      }}>
+                        {formatSnowAmount(snow)}
+                      </div>
+
+                      <div style={styles.windSpeed}>
+                        <Wind size={12} weight="thin" color="#94a3b8" />
+                        <span style={{ marginLeft: '2px' }}>{Math.round(wind)}</span>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </>
           )}
 

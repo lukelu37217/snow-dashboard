@@ -135,12 +135,35 @@ export const DropletIcon: React.FC<IconProps> = ({ size = 24, color = 'currentCo
     </svg>
 );
 
-// Layers Icon (for snow depth)
+// Layers Icon (for snow depth / radar layers)
 export const LayersIcon: React.FC<IconProps> = ({ size = 24, color = 'currentColor', className = '' }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
         <polygon points="12 2 2 7 12 12 22 7 12 2" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         <polyline points="2 17 12 22 22 17" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         <polyline points="2 12 12 17 22 12" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+);
+
+// Clipboard Icon (for mission brief / summary)
+export const ClipboardIcon: React.FC<IconProps> = ({ size = 24, color = 'currentColor', className = '' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+        <path d="M16 4H18C18.5304 4 19.0391 4.21071 19.4142 4.58579C19.7893 4.96086 20 5.46957 20 6V20C20 20.5304 19.7893 21.0391 19.4142 21.4142C19.0391 21.7893 18.5304 22 18 22H6C5.46957 22 4.96086 21.7893 4.58579 21.4142C4.21071 21.0391 4 20.5304 4 20V6C4 5.46957 4.21071 4.96086 4.58579 4.58579C4.96086 4.21071 5.46957 4 6 4H8"
+            stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <rect x="8" y="2" width="8" height="4" rx="1" ry="1" stroke={color} strokeWidth="2"/>
+        <line x1="8" y1="10" x2="16" y2="10" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+        <line x1="8" y1="14" x2="16" y2="14" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+        <line x1="8" y1="18" x2="12" y2="18" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+);
+
+// Stopwatch Icon (for timing / snow ends at)
+export const StopwatchIcon: React.FC<IconProps> = ({ size = 24, color = 'currentColor', className = '' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+        <circle cx="12" cy="13" r="8" stroke={color} strokeWidth="2"/>
+        <path d="M12 9V13L14.5 15.5" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M9 2H15" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+        <path d="M12 2V5" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+        <path d="M19 6L20.5 4.5" stroke={color} strokeWidth="2" strokeLinecap="round"/>
     </svg>
 );
 
