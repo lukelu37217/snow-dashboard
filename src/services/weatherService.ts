@@ -9,7 +9,7 @@ const BASE_URL = 'https://api.open-meteo.com/v1/forecast';
 // ============= FALLBACK MODE =============
 // Set to true to use mock data when API is rate-limited (429 errors)
 // Set to false to use real API calls
-const USE_MOCK_DATA = false; // Toggle this when API limits reset
+const USE_MOCK_DATA = true; // Toggle this when API limits reset
 
 // ============= CACHE SYSTEM =============
 // Cache weather data for 30 minutes to reduce API calls significantly
@@ -192,7 +192,29 @@ export interface HybridWeatherResult {
 
 export const fetchCommunityWeather = async (lat: number, lon: number, forceRefresh = false): Promise<HybridWeatherResult | null> => {
     try {
-        // Parallel Fetch
+        // In MOCK MODE, use fully mocked data for demo consistency
+        if (USE_MOCK_DATA) {
+            const forecast = await fetchDetailedForecast(lat, lon, forceRefresh);
+            if (!forecast) throw new Error("Forecast failed");
+
+            // Mock observation that matches forecast data for demo
+            const snowCodes = [71, 73, 75, 77, 85, 86];
+            const isSnowingNow = forecast.current.snowfall > 0 || 
+                (forecast.current.weather_code !== undefined && snowCodes.includes(forecast.current.weather_code));
+
+            const current = {
+                temperature: forecast.current.temperature_2m,
+                isSnowing: isSnowingNow,
+                condition: isSnowingNow ? "Snow" : "Cloudy",
+                source: 'observation' as const // Mark as observation for UI display
+            };
+
+            const snowRemoval = calculateSnowRemoval(forecast.hourly);
+
+            return { current, forecast, snowRemoval };
+        }
+
+        // REAL MODE: Parallel Fetch from APIs
         const [forecast, observation] = await Promise.all([
             fetchDetailedForecast(lat, lon, forceRefresh),
             getObservation() // Fetches XWG XML
@@ -244,37 +266,61 @@ export const fetchWeatherBatch = async (locations: { id: string; lat: number; lo
     // USE MOCK DATA when API is rate-limited
     if (USE_MOCK_DATA) {
         console.log('📊 Using mock weather data (API rate-limited)');
-        const mockResults: WeatherData[] = locations.map(loc => {
-            // Generate realistic snow accumulation (most zones 0, some with snow)
-            const hasSnow = Math.random() < 0.15; // 15% chance of snow
-            const snowAccum24h = hasSnow ? Math.random() * 3 : 0; // 0-3cm when snowing
+        const mockResults: WeatherData[] = locations.map((loc, index) => {
+            // DEMO MODE: Create a realistic distribution to showcase all features
+            // - 5% RED zones (Commercial: 5-8cm) - high priority
+            // - 15% ORANGE zones (Residential: 1-4.9cm) - medium priority  
+            // - 80% GREEN zones (0-0.9cm) - monitoring only
             
-            // Determine priority based on 24h accumulation
-            let priority: 'high' | 'medium' | 'low' = 'low';
-            let needsRemoval = false;
+            const roll = Math.random();
+            let snowAccum24h: number;
+            let priority: 'high' | 'medium' | 'low';
+            let needsRemoval: boolean;
             
-            if (snowAccum24h >= 5) {
-                priority = 'high'; // Commercial
+            if (roll < 0.05) {
+                // RED - Commercial trigger (5cm+)
+                snowAccum24h = 5 + Math.random() * 3; // 5-8cm
+                priority = 'high';
                 needsRemoval = true;
-            } else if (snowAccum24h >= 1) {
-                priority = 'medium'; // Residential
+            } else if (roll < 0.20) {
+                // ORANGE - Residential trigger (1-4.9cm)
+                snowAccum24h = 1 + Math.random() * 3.9; // 1-4.9cm
+                priority = 'medium';
                 needsRemoval = true;
+            } else if (roll < 0.35) {
+                // Light snow - SALTING/WATCH (0.3-0.9cm)
+                snowAccum24h = 0.3 + Math.random() * 0.6; // 0.3-0.9cm
+                priority = 'low';
+                needsRemoval = false;
+            } else {
+                // GREEN - Clear (0-0.3cm)
+                snowAccum24h = Math.random() * 0.3; // 0-0.3cm
+                priority = 'low';
+                needsRemoval = false;
             }
+            
+            const hasActiveSnow = snowAccum24h > 0.5;
             
             return {
                 id: loc.id,
-                temperature: -2 + Math.random() * 4, // -2 to +2°C (realistic for Winnipeg)
-                snowfall: hasSnow ? Math.random() * 0.5 : 0,
-                apparentTemperature: -5 + Math.random() * 4,
-                windGusts: 10 + Math.random() * 20,
+                temperature: -12 + Math.random() * 4, // -12 to -8°C (cold Winnipeg day)
+                snowfall: hasActiveSnow ? 0.1 + Math.random() * 0.4 : 0, // current rate
+                apparentTemperature: -18 + Math.random() * 4,
+                windGusts: 25 + Math.random() * 15, // 25-40 km/h
                 snowAccumulation24h: snowAccum24h,
                 snowRemoval: {
                     needsRemoval,
                     priority,
-                    reasons: snowAccum24h >= 1 ? [`24h: ${snowAccum24h.toFixed(1)}cm`] : [],
-                    snowDepthCm: snowAccum24h * 0.8, // rough estimate
-                    recent3hSnowfall: hasSnow ? Math.random() * 1 : 0,
-                    next3hSnowfall: hasSnow ? Math.random() * 0.5 : 0
+                    reasons: snowAccum24h >= 5 
+                        ? [`24h: ${snowAccum24h.toFixed(1)}cm (Commercial)`]
+                        : snowAccum24h >= 1 
+                            ? [`24h: ${snowAccum24h.toFixed(1)}cm (Residential)`]
+                            : snowAccum24h >= 0.3
+                                ? [`24h: ${snowAccum24h.toFixed(1)}cm (Salting)`]
+                                : [],
+                    snowDepthCm: snowAccum24h * 0.85,
+                    recent3hSnowfall: hasActiveSnow ? 0.2 + Math.random() * 0.8 : 0,
+                    next3hSnowfall: hasActiveSnow ? 0.3 + Math.random() * 1.2 : 0
                 }
             };
         });
@@ -389,6 +435,7 @@ export const fetchDetailedForecast = async (lat: number, lon: number, forceRefre
         console.log('📊 Using mock forecast data (API rate-limited)');
         
         const now = new Date();
+        const currentHour = now.getHours();
         const hourlyTimes: string[] = [];
         const hourlySnowfall: number[] = [];
         const hourlySnowDepth: number[] = [];
@@ -396,34 +443,83 @@ export const fetchDetailedForecast = async (lat: number, lon: number, forceRefre
         const hourlyPrecipProb: number[] = [];
         const hourlyApparent: number[] = [];
         const hourlyWindGusts: number[] = [];
+        const hourlyWeatherCode: number[] = [];
+        
+        // DEMO: Create a realistic snow event pattern
+        // Snow starts now, peaks in 4-6 hours, ends around +16 hours (early morning tomorrow)
+        const snowStartHour = 0; // relative to now
+        const snowPeakHour = 5;  // peak intensity
+        const snowEndHour = 16;  // snow stops
         
         // Generate 168 hours (7 days) of mock data
         for (let i = 0; i < 168; i++) {
             const time = new Date(now.getTime() + i * 3600000);
             hourlyTimes.push(time.toISOString().slice(0, 16));
             
-            // Simulate some weather patterns
-            const isNight = time.getHours() < 6 || time.getHours() > 20;
-            const baseTemp = isNight ? -8 : -3;
-            hourlyTemp.push(baseTemp + Math.random() * 6);
-            hourlyApparent.push(baseTemp - 3 + Math.random() * 4);
-            hourlySnowfall.push(Math.random() < 0.15 ? Math.random() * 1.5 : 0);
-            hourlySnowDepth.push(Math.random() * 0.15); // meters
-            hourlyPrecipProb.push(Math.floor(Math.random() * 40));
-            hourlyWindGusts.push(15 + Math.random() * 25);
+            const hour = time.getHours();
+            const isNight = hour < 6 || hour > 20;
+            const baseTemp = isNight ? -15 : -10;
+            hourlyTemp.push(baseTemp + Math.random() * 3);
+            hourlyApparent.push(baseTemp - 6 + Math.random() * 2);
+            hourlyWindGusts.push(28 + Math.random() * 12); // 28-40 km/h
+            
+            // Snow pattern: bell curve peaking at snowPeakHour
+            let snowfall = 0;
+            let precipProb = 20;
+            let weatherCode = 3; // Overcast default
+            
+            if (i >= snowStartHour && i < snowEndHour) {
+                // Active snow period
+                const distFromPeak = Math.abs(i - snowPeakHour);
+                const intensity = Math.max(0, 1 - (distFromPeak / 8)); // Bell curve
+                snowfall = intensity * (0.8 + Math.random() * 0.6); // 0-1.4 cm/h at peak
+                precipProb = 60 + Math.floor(intensity * 30); // 60-90%
+                
+                // Weather codes based on intensity
+                if (snowfall > 0.8) {
+                    weatherCode = 75; // Heavy snow
+                } else if (snowfall > 0.3) {
+                    weatherCode = 73; // Moderate snow
+                } else if (snowfall > 0) {
+                    weatherCode = 71; // Light snow
+                }
+            } else if (i >= snowEndHour && i < snowEndHour + 6) {
+                // Flurries after main event
+                snowfall = Math.random() < 0.3 ? Math.random() * 0.2 : 0;
+                precipProb = 30;
+                weatherCode = snowfall > 0 ? 71 : 3;
+            }
+            
+            hourlySnowfall.push(Math.round(snowfall * 100) / 100);
+            hourlySnowDepth.push(0.05 + (i < snowEndHour ? i * 0.008 : snowEndHour * 0.008)); // Accumulating depth
+            hourlyPrecipProb.push(precipProb);
+            hourlyWeatherCode.push(weatherCode);
         }
         
+        // Daily forecast with clear snow event on day 1, clearing after
         const dailyTimes: string[] = [];
         const dailyMax: number[] = [];
         const dailyMin: number[] = [];
         const dailySnowSum: number[] = [];
+        const dailyWeatherCode: number[] = [];
+        
+        const dailyData = [
+            { maxOffset: -8, minOffset: -16, snow: 4.5, code: 73 },  // Today: Snow
+            { maxOffset: -6, minOffset: -14, snow: 1.2, code: 71 },  // Tomorrow: Light snow
+            { maxOffset: -4, minOffset: -12, snow: 0, code: 3 },     // Day 3: Cloudy
+            { maxOffset: -5, minOffset: -15, snow: 2.8, code: 73 },  // Day 4: More snow
+            { maxOffset: -3, minOffset: -11, snow: 0, code: 2 },     // Day 5: Partly cloudy
+            { maxOffset: -2, minOffset: -10, snow: 0, code: 0 },     // Day 6: Clear
+            { maxOffset: -4, minOffset: -13, snow: 0.5, code: 71 },  // Day 7: Light snow
+        ];
         
         for (let i = 0; i < 7; i++) {
             const day = new Date(now.getTime() + i * 86400000);
             dailyTimes.push(day.toISOString().slice(0, 10));
-            dailyMax.push(-2 + Math.random() * 5);
-            dailyMin.push(-10 + Math.random() * 5);
-            dailySnowSum.push(Math.random() < 0.4 ? Math.random() * 8 : 0);
+            dailyMax.push(dailyData[i].maxOffset + Math.random() * 2);
+            dailyMin.push(dailyData[i].minOffset + Math.random() * 2);
+            dailySnowSum.push(dailyData[i].snow);
+            dailyWeatherCode.push(dailyData[i].code);
         }
         
         const mockForecast: DetailedForecast = {
@@ -434,21 +530,22 @@ export const fetchDetailedForecast = async (lat: number, lon: number, forceRefre
                 temperature_2m: hourlyTemp,
                 apparent_temperature: hourlyApparent,
                 wind_gusts_10m: hourlyWindGusts,
-                precipitation_probability: hourlyPrecipProb
+                precipitation_probability: hourlyPrecipProb,
+                weather_code: hourlyWeatherCode
             },
             current: {
-                // Use realistic Winnipeg winter temperature (close to Weather Canada observation)
-                temperature_2m: -1 + Math.random() * 2, // -1 to +1°C (matches real observation ~-0.1)
-                snowfall: 0,
-                apparent_temperature: -4 + Math.random() * 2,
-                wind_gusts_10m: 5 + Math.random() * 15,
-                weather_code: 3 // Overcast
+                temperature_2m: -12,
+                snowfall: 0.4, // Currently snowing
+                apparent_temperature: -18,
+                wind_gusts_10m: 32,
+                weather_code: 73 // Moderate snow
             },
             daily: {
                 time: dailyTimes,
                 temperature_2m_max: dailyMax,
                 temperature_2m_min: dailyMin,
-                snowfall_sum: dailySnowSum
+                snowfall_sum: dailySnowSum,
+                weather_code: dailyWeatherCode
             }
         };
         

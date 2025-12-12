@@ -107,11 +107,23 @@ const NeighborhoodDetail: React.FC<NeighborhoodDetailProps> = ({ name, data, for
         return "Ongoing (24h+)";
     };
 
-    // Get current condition text from Weather Canada
+    // Get current condition text - prioritize forecast data for consistency
     const getCurrentCondition = (): string => {
+        // First check if we have current snowfall from forecast (more reliable for demo)
+        if (forecast?.current?.snowfall && forecast.current.snowfall > 0) {
+            return "Snow";
+        }
+        // Then check weather code
+        if (forecast?.current?.weather_code) {
+            const code = forecast.current.weather_code;
+            if (code >= 71 && code <= 77) return "Snow";
+            if (code === 85 || code === 86) return "Snow Showers";
+        }
+        // Then try EC forecast
         if (ecForecast?.hourlyForecasts?.length) {
             return ecForecast.hourlyForecasts[0].condition;
         }
+        // Fallback to data snowfall
         return data?.snowfall && data.snowfall > 0 ? "Snowing" : "Clear";
     };
 

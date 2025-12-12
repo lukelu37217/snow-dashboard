@@ -100,21 +100,37 @@ export const getObservation = async (): Promise<RealTimeObservation | null> => {
         const snowDepth = props.snw_dpth || props.snw_dpth_1 || 0;
         const pcpnPast1hr = props['pcpn_amt_pst1hr'] || 0; // Total precipitation past hour
         const rnflPast1hr = props['rnfl_amt_pst1hr'] || 0; // Rainfall past hour
+        
+        // Additional snow indicators
+        const presentWeather = props['prsnt_wx'] || props['prsnt_wx-value'] || '';
+        const visibilityKm = props['vis'] || props['vis-value'] || 999;
 
         // If total precip > rainfall, then we have snowfall
         const snowfallAmount = Math.max(0, pcpnPast1hr - rnflPast1hr);
 
-        // Determine if it's currently snowing:
-        // 1. Recent snowfall detected (precipitation when temp < 0)
-        // 2. Or recent precipitation with cold temperature
-        const isSnowing = (snowfallAmount > 0) || (pcpnPast1hr > 0 && temperature < 0);
+        // IMPROVED: Determine if it's currently snowing using multiple signals:
+        // 1. Recent snowfall detected (precipitation when temp < 2°C - snow can fall at slightly above 0)
+        // 2. Present weather code contains snow indicator
+        // 3. Low visibility + cold temp + any precipitation (likely snow)
+        // 4. Temperature below 0 and any precipitation
+        const hasSnowPrecip = (snowfallAmount > 0) || (pcpnPast1hr > 0 && temperature < 2);
+        const hasSnowWeatherCode = presentWeather.toLowerCase().includes('snow') || 
+                                   presentWeather.toLowerCase().includes('sn') ||
+                                   presentWeather.includes('S') && !presentWeather.includes('SU');
+        const hasReducedVisibility = visibilityKm < 5 && temperature < 2;
+        
+        const isSnowing = hasSnowPrecip || hasSnowWeatherCode || (hasReducedVisibility && pcpnPast1hr > 0);
 
-        // Generate condition string
-        let condition = "Clear";
+        // Generate condition string - also check hourly forecast for current condition
+        let condition = "Cloudy"; // Default to cloudy in winter
         if (isSnowing) {
+            condition = snowfallAmount > 2 ? "Heavy Snow" : "Snow";
+        } else if (hasSnowWeatherCode) {
             condition = "Snow";
         } else if (pcpnPast1hr > 0) {
-            condition = temperature < 0 ? "Snow" : "Rain";
+            condition = temperature < 2 ? "Snow" : "Rain";
+        } else if (temperature < -10) {
+            condition = "Cold & Clear";
         } else if (snowDepth > 0) {
             condition = "Cloudy";
         }
@@ -132,9 +148,36 @@ export const getObservation = async (): Promise<RealTimeObservation | null> => {
             station: `${stationName} (${stationId})`
         };
 
+        // ENHANCEMENT: Cross-check with hourly forecast for better accuracy
+        // If forecast says snow but observation doesn't detect it, trust forecast
+        try {
+            const forecast = await getHourlyForecast();
+            if (forecast?.hourlyForecasts?.length) {
+                const currentForecast = forecast.hourlyForecasts[0];
+                const forecastCondition = currentForecast.condition.toLowerCase();
+                const forecastSaysSnow = forecastCondition.includes('snow') || 
+                                         forecastCondition.includes('flurr') ||
+                                         forecastCondition.includes('blizzard');
+                const highPrecipChance = currentForecast.precipChance >= 60;
+                
+                // If forecast strongly indicates snow but observation missed it
+                if (forecastSaysSnow && highPrecipChance && !observation.isSnowing) {
+                    console.log('🌨️ Forecast indicates snow, upgrading observation');
+                    observation.isSnowing = true;
+                    observation.condition = currentForecast.condition;
+                }
+                // Also update condition from forecast if observation is generic
+                else if (forecastSaysSnow && observation.condition === 'Cloudy') {
+                    observation.condition = `Chance of ${currentForecast.condition}`;
+                }
+            }
+        } catch (e) {
+            // Ignore forecast enhancement errors
+        }
+
         // Cache the observation
         cacheService.set(OBS_CACHE_KEY, observation, OBS_CACHE_TTL);
-        console.log('✅ Fetched fresh EC SWOB observation:', observation.station);
+        console.log('✅ Fetched fresh EC SWOB observation:', observation.station, '| Snowing:', observation.isSnowing);
 
         return observation;
     } catch (error: any) {
