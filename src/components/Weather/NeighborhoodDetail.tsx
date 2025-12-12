@@ -12,7 +12,7 @@
  */
 
 import React from 'react';
-import { CloseIcon, LocationIcon, SnowIcon, TemperatureIcon, WindIcon, AlertIcon, ClockIcon, StopwatchIcon } from '../Icons/Icons';
+import { CloseIcon, LocationIcon, SnowIcon, TemperatureIcon, WindIcon, AlertIcon, StopwatchIcon } from '../Icons/Icons';
 import type { WeatherData, DetailedForecast } from '../../services/weatherService';
 import type { ECForecastData } from '../../services/weatherCanadaService';
 
@@ -26,14 +26,6 @@ interface NeighborhoodDetailProps {
 
 const NeighborhoodDetail: React.FC<NeighborhoodDetailProps> = ({ name, data, forecast, ecForecast, onClose }) => {
     if (!name) return null;
-
-    // Calculate future 24h snowfall from Open-Meteo forecast (precise cm data)
-    const calculateFuture24hSnow = (): number => {
-        if (!forecast?.hourly?.snowfall) return 0;
-        const currentHour = new Date().getHours();
-        const next24h = forecast.hourly.snowfall.slice(currentHour, currentHour + 24);
-        return next24h.reduce((sum, val) => sum + (val || 0), 0);
-    };
 
     // Calculate current snowfall rate from Open-Meteo (cm/h)
     const getCurrentSnowRate = (): number => {
@@ -155,16 +147,20 @@ const NeighborhoodDetail: React.FC<NeighborhoodDetailProps> = ({ name, data, for
         };
     };
 
-    const snow24h = data?.snowAccumulation24h || 0;
-    // Use snow24h from map data as the authoritative source (it's already calculated correctly)
-    const future24hSnow = snow24h; // This ensures consistency between Section A and Section B
+    // PAST 24h: Actual snow that has fallen (for Section A - Ground Reality)
+    const pastSnow24h = data?.pastSnow24h || 0;
+    // FUTURE 24h: Forecast snow (for Section B - Forecast)
+    const futureSnow24h = data?.snowAccumulation24h || 0;
+    
+    // Use PAST data for threshold/removal decisions (what's actually on the ground)
     const snowStopTime = calculateSnowStopTime();
-    const thresholdStatus = getThresholdStatus(snow24h);
+    const thresholdStatus = getThresholdStatus(pastSnow24h);
     const currentSnowRate = getCurrentSnowRate();
     const currentCondition = getCurrentCondition();
     
-    // Progress to 5cm threshold
-    const progressTo5cm = Math.min((snow24h / 5) * 100, 100);
+    // Progress to 5cm threshold (based on past + future accumulation)
+    const totalExpected = pastSnow24h + futureSnow24h;
+    const progressTo5cm = Math.min((totalExpected / 5) * 100, 100);
 
     return (
         <div style={{
@@ -261,7 +257,7 @@ const NeighborhoodDetail: React.FC<NeighborhoodDetailProps> = ({ name, data, for
                             </div>
                         </div>
 
-                        {/* Big Number: Total Accumulated Snow */}
+                        {/* Big Number: Total Accumulated Snow (PAST 24h) */}
                         <div style={{
                             textAlign: 'center',
                             marginBottom: '16px'
@@ -273,7 +269,7 @@ const NeighborhoodDetail: React.FC<NeighborhoodDetailProps> = ({ name, data, for
                                 lineHeight: 1,
                                 letterSpacing: '-2px'
                             }}>
-                                {snow24h.toFixed(1)}
+                                {pastSnow24h.toFixed(1)}
                             </div>
                             <div style={{
                                 fontSize: '1.2rem',
@@ -313,13 +309,13 @@ const NeighborhoodDetail: React.FC<NeighborhoodDetailProps> = ({ name, data, for
                                     backgroundColor: '#f59e0b',
                                     zIndex: 2
                                 }} />
-                                {/* Progress fill */}
+                                {/* Progress fill - use totalExpected for progress bar */}
                                 <div style={{
                                     height: '100%',
                                     width: `${progressTo5cm}%`,
-                                    background: snow24h >= 5 
+                                    background: totalExpected >= 5 
                                         ? 'linear-gradient(90deg, #22c55e 0%, #f59e0b 20%, #ef4444 100%)'
-                                        : snow24h >= 1
+                                        : totalExpected >= 1
                                         ? 'linear-gradient(90deg, #22c55e 0%, #f59e0b 100%)'
                                         : '#22c55e',
                                     borderRadius: '6px',
@@ -358,14 +354,14 @@ const NeighborhoodDetail: React.FC<NeighborhoodDetailProps> = ({ name, data, for
                                 }}>
                                     {thresholdStatus.level}
                                 </div>
-                                {snow24h < 5 && snow24h >= 1 && (
+                                {totalExpected < 5 && totalExpected >= 1 && (
                                     <div style={{ fontSize: '0.8rem', color: thresholdStatus.color, marginTop: '2px' }}>
-                                        {(5 - snow24h).toFixed(1)}cm to Commercial trigger
+                                        {(5 - totalExpected).toFixed(1)}cm to Commercial trigger
                                     </div>
                                 )}
-                                {snow24h < 1 && (
+                                {totalExpected < 1 && (
                                     <div style={{ fontSize: '0.8rem', color: thresholdStatus.color, marginTop: '2px' }}>
-                                        {(1 - snow24h).toFixed(1)}cm to Residential trigger
+                                        {(1 - totalExpected).toFixed(1)}cm to Residential trigger
                                     </div>
                                 )}
                             </div>
@@ -526,10 +522,10 @@ const NeighborhoodDetail: React.FC<NeighborhoodDetailProps> = ({ name, data, for
                                 <div style={{
                                     fontSize: '2rem',
                                     fontWeight: 800,
-                                    color: future24hSnow > 2 ? '#ef4444' : future24hSnow > 0.5 ? '#f59e0b' : '#22c55e',
+                                    color: futureSnow24h > 2 ? '#ef4444' : futureSnow24h > 0.5 ? '#f59e0b' : '#22c55e',
                                     lineHeight: 1
                                 }}>
-                                    +{future24hSnow.toFixed(1)}
+                                    +{futureSnow24h.toFixed(1)}
                                 </div>
                                 <div style={{
                                     fontSize: '0.8rem',
@@ -601,17 +597,17 @@ const NeighborhoodDetail: React.FC<NeighborhoodDetailProps> = ({ name, data, for
                                 lineHeight: 1.4
                             }}>
                                 {(() => {
-                                    const totalExpected = snow24h + future24hSnow;
-                                    if (snow24h >= 5) {
+                                    // Use already-calculated totalExpected from outer scope
+                                    if (pastSnow24h >= 5) {
                                         return "Commercial already triggered. Full deployment active.";
                                     }
                                     if (totalExpected >= 5) {
                                         return `Will hit Commercial threshold. Expected total: ${totalExpected.toFixed(1)}cm. Consider pre-positioning crews.`;
                                     }
                                     if (totalExpected >= 1) {
-                                        return `Residential threshold ${snow24h >= 1 ? 'triggered' : 'will be hit'}. Expected total: ${totalExpected.toFixed(1)}cm.`;
+                                        return `Residential threshold ${pastSnow24h >= 1 ? 'triggered' : 'will be hit'}. Expected total: ${totalExpected.toFixed(1)}cm.`;
                                     }
-                                    if (future24hSnow > 0) {
+                                    if (futureSnow24h > 0) {
                                         return `Light snow expected. Monitor conditions. May need salting.`;
                                     }
                                     return "Clear conditions expected. No immediate action needed.";
@@ -620,7 +616,7 @@ const NeighborhoodDetail: React.FC<NeighborhoodDetailProps> = ({ name, data, for
                         </div>
 
                         {/* Projected Total */}
-                        {future24hSnow > 0 && (
+                        {futureSnow24h > 0 && (
                             <div style={{
                                 marginTop: '12px',
                                 padding: '10px',
@@ -635,7 +631,7 @@ const NeighborhoodDetail: React.FC<NeighborhoodDetailProps> = ({ name, data, for
                                     Projected 24h Total:
                                 </span>
                                 <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#92400e' }}>
-                                    {(snow24h + future24hSnow).toFixed(1)} cm
+                                    {totalExpected.toFixed(1)} cm
                                 </span>
                             </div>
                         )}

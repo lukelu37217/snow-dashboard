@@ -68,8 +68,9 @@ const GlobalForecastBar: React.FC<GlobalForecastBarProps> = ({ forecast, realtim
   const ecHours = useWeatherCanada ? ecForecast.hourlyForecasts.slice(0, 24) : [];
   
   // Open-Meteo fallback data
+  // NOTE: API now uses past_days=1, so indices 0-23 are yesterday, 24+ are today onwards
   const currentHour = new Date().getHours();
-  const startIndex = currentHour;
+  const startIndex = 24 + currentHour; // Offset by 24 hours to account for past_days=1
   const omHours = hourly.time.slice(startIndex, startIndex + 24);
   const omTemps = hourly.temperature_2m.slice(startIndex, startIndex + 24);
   const omSnows = hourly.snowfall.slice(startIndex, startIndex + 24);

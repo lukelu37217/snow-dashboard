@@ -59,11 +59,14 @@ export const getObservation = async (): Promise<RealTimeObservation | null> => {
 
     try {
         // Query SWOB API for Winnipeg area stations using bounding box
-        // IMPORTANT: Must include datetime parameter to get today's data, otherwise returns old cached data
-        const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
-        const url = `${SWOB_API_BASE}?bbox=${BBOX_QUERY}&datetime=${today}&f=json&limit=10`;
+        // IMPORTANT: Must use datetime RANGE to get RECENT observations
+        // Using just a date (YYYY-MM-DD) returns data starting from midnight, not current time
+        const now = new Date();
+        const endTime = now.toISOString().replace(/\.\d{3}Z$/, 'Z'); // Current time
+        const startTime = new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z'); // 2 hours ago
+        const url = `${SWOB_API_BASE}?bbox=${BBOX_QUERY}&datetime=${startTime}/${endTime}&f=json&limit=10`;
 
-        console.log(`🌡️ Fetching EC observation for ${today}...`);
+        console.log(`🌡️ Fetching EC observation from ${startTime} to ${endTime}...`);
         const response = await axios.get(url, { timeout: 10000 });
 
         if (!response.data || !response.data.features || response.data.features.length === 0) {
@@ -72,20 +75,22 @@ export const getObservation = async (): Promise<RealTimeObservation | null> => {
 
         // Find the most recent observation from preferred stations (XWG or CYWG)
         // XWG = WINNIPEG 'A' CS (Climate Station at airport)
-        // CYWG = Winnipeg Richardson International Airport
+        // XWN = WINNIPEG THE FORKS (downtown weather station)
         const features = response.data.features;
         
-        // Sort by observation time to get most recent
+        // Sort by observation time to get most recent first
         features.sort((a: any, b: any) => {
-            const timeA = a.properties['date_tm-value'] || '';
-            const timeB = b.properties['date_tm-value'] || '';
+            const timeA = a.properties['date_tm-value'] || a.properties.obs_date_tm || '';
+            const timeB = b.properties['date_tm-value'] || b.properties.obs_date_tm || '';
             return timeB.localeCompare(timeA); // Descending order (newest first)
         });
         
+        // Find the most recent observation from preferred stations (after sorting)
+        // This ensures we get the LATEST reading from a preferred station
+        const preferredStations = ['XWG', 'XWN', 'CYWG'];
         let bestFeature = features.find((f: any) =>
-            f.properties['tc_id-value'] === 'XWG' ||
-            f.properties['tc_id-value'] === 'CYWG'
-        ) || features[0]; // Fallback to first available
+            preferredStations.includes(f.properties['tc_id-value'])
+        ) || features[0]; // Fallback to first available (which is most recent due to sorting)
 
         const props = bestFeature.properties;
 

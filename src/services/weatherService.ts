@@ -53,7 +53,8 @@ export interface WeatherData {
     temperature: number;
     apparentTemperature: number;
     windGusts: number; // km/h
-    snowAccumulation24h: number; // cm (Sum of next 24h)
+    snowAccumulation24h: number; // cm (Sum of NEXT 24h forecast)
+    pastSnow24h: number; // cm (Sum of PAST 24h actual)
     snowfall: number; // Current rate
 
     // New Extended Status
@@ -274,27 +275,32 @@ export const fetchWeatherBatch = async (locations: { id: string; lat: number; lo
             
             const roll = Math.random();
             let snowAccum24h: number;
+            let pastSnow24h: number;
             let priority: 'high' | 'medium' | 'low';
             let needsRemoval: boolean;
             
             if (roll < 0.05) {
                 // RED - Commercial trigger (5cm+)
-                snowAccum24h = 5 + Math.random() * 3; // 5-8cm
+                snowAccum24h = 5 + Math.random() * 3; // 5-8cm future
+                pastSnow24h = 3 + Math.random() * 2; // 3-5cm already fallen
                 priority = 'high';
                 needsRemoval = true;
             } else if (roll < 0.20) {
                 // ORANGE - Residential trigger (1-4.9cm)
-                snowAccum24h = 1 + Math.random() * 3.9; // 1-4.9cm
+                snowAccum24h = 1 + Math.random() * 3.9; // 1-4.9cm future
+                pastSnow24h = 0.5 + Math.random() * 1.5; // 0.5-2cm already fallen
                 priority = 'medium';
                 needsRemoval = true;
             } else if (roll < 0.35) {
                 // Light snow - SALTING/WATCH (0.3-0.9cm)
                 snowAccum24h = 0.3 + Math.random() * 0.6; // 0.3-0.9cm
+                pastSnow24h = Math.random() * 0.3; // trace amounts
                 priority = 'low';
                 needsRemoval = false;
             } else {
                 // GREEN - Clear (0-0.3cm)
                 snowAccum24h = Math.random() * 0.3; // 0-0.3cm
+                pastSnow24h = 0; // no snow
                 priority = 'low';
                 needsRemoval = false;
             }
@@ -308,6 +314,7 @@ export const fetchWeatherBatch = async (locations: { id: string; lat: number; lo
                 apparentTemperature: -18 + Math.random() * 4,
                 windGusts: 25 + Math.random() * 15, // 25-40 km/h
                 snowAccumulation24h: snowAccum24h,
+                pastSnow24h: pastSnow24h,
                 snowRemoval: {
                     needsRemoval,
                     priority,
@@ -318,7 +325,7 @@ export const fetchWeatherBatch = async (locations: { id: string; lat: number; lo
                             : snowAccum24h >= 0.3
                                 ? [`24h: ${snowAccum24h.toFixed(1)}cm (Salting)`]
                                 : [],
-                    snowDepthCm: snowAccum24h * 0.85,
+                    snowDepthCm: pastSnow24h * 0.85, // Use past snow for depth
                     recent3hSnowfall: hasActiveSnow ? 0.2 + Math.random() * 0.8 : 0,
                     next3hSnowfall: hasActiveSnow ? 0.3 + Math.random() * 1.2 : 0
                 }
@@ -348,11 +355,13 @@ export const fetchWeatherBatch = async (locations: { id: string; lat: number; lo
         try {
             console.log(`Fetching chunk ${chunkIdx + 1}/${chunks.length} (${chunk.length} locations)`);
             
+            // Fetch with past_days=1 to get past 24h data + forecast_days=2 for future
             const dataListResponse = await fetchWithRetry(BASE_URL, {
                 latitude: lats,
                 longitude: lons,
                 current: 'temperature_2m,snowfall,apparent_temperature,wind_gusts_10m',
                 hourly: 'snowfall,snow_depth,temperature_2m',
+                past_days: 1,     // Include past 24 hours of data
                 forecast_days: 2, // Need 2 days to ensure 24h coverage from any hour
                 timezone: 'America/Winnipeg'
             });
@@ -366,17 +375,29 @@ export const fetchWeatherBatch = async (locations: { id: string; lat: number; lo
                 const current = data.current || {};
                 const hourly = data.hourly || {};
 
-                // 24h Accumulation
-                const currentHour = new Date().getHours();
+                // With past_days=1, hourly data starts from 24 hours ago
+                // Index 0-23 = past 24h, index 24+ = today onwards
+                const now = new Date();
+                const currentHourIndex = 24 + now.getHours(); // Offset by past day
+                
+                // PAST 24h: Sum snowfall from index 0 to currentHourIndex
+                let past24hSnow = 0;
+                if (hourly.snowfall) {
+                    for (let k = Math.max(0, currentHourIndex - 24); k < currentHourIndex && k < hourly.snowfall.length; k++) {
+                        past24hSnow += hourly.snowfall[k] || 0;
+                    }
+                }
+                
+                // FUTURE 24h: Sum snowfall from currentHourIndex to currentHourIndex + 24
                 let next24hSnow = 0;
                 if (hourly.snowfall) {
-                    for (let k = currentHour; k < currentHour + 24 && k < hourly.snowfall.length; k++) {
-                        next24hSnow += hourly.snowfall[k];
+                    for (let k = currentHourIndex; k < currentHourIndex + 24 && k < hourly.snowfall.length; k++) {
+                        next24hSnow += hourly.snowfall[k] || 0;
                     }
                 }
 
-                // Pass 24h snowfall to calculate removal status
-                const removalStatus = calculateSnowRemoval(hourly, next24hSnow);
+                // Use PAST 24h for removal status (what has actually fallen)
+                const removalStatus = calculateSnowRemoval(hourly, past24hSnow);
 
                 results.push({
                     id: loc.id,
@@ -384,7 +405,8 @@ export const fetchWeatherBatch = async (locations: { id: string; lat: number; lo
                     snowfall: current.snowfall || 0,
                     apparentTemperature: current.apparent_temperature || 0,
                     windGusts: current.wind_gusts_10m || 0,
-                    snowAccumulation24h: next24hSnow,
+                    snowAccumulation24h: next24hSnow,  // Future forecast
+                    pastSnow24h: past24hSnow,          // Actual past accumulation
                     snowRemoval: removalStatus
                 });
             });
@@ -400,6 +422,7 @@ export const fetchWeatherBatch = async (locations: { id: string; lat: number; lo
                     apparentTemperature: 0,
                     windGusts: 0,
                     snowAccumulation24h: 0,
+                    pastSnow24h: 0,
                     snowRemoval: { needsRemoval: false, priority: 'low', reasons: [], snowDepthCm: 0, recent3hSnowfall: 0, next3hSnowfall: 0 }
                 });
             });

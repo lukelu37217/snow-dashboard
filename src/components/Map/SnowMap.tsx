@@ -15,12 +15,18 @@ import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import type { WeatherData } from '../../services/weatherService';
+import { CLIENT_PROPERTIES, type ClientProperty } from '../../config/clientProperties';
+import { getZoneStatus, getZoneColor, getZoneLevel } from '../../utils/zoneStatusHelper';
 
 interface SnowMapProps {
     geoJsonData: any;
     weatherData: Map<string, WeatherData>;
     showRadar: boolean;
     onSelectNeighborhood: (feature: any) => void;
+    mapRef?: React.MutableRefObject<L.Map | null>;
+    selectedZoneId?: string | null; // Track selected zone for highlighting
+    selectedPropertyId?: string | null; // NEW: Track selected property for highlighting
+    onSelectProperty?: (property: ClientProperty) => void; // NEW: Property click handler
 }
 
 // RainViewer API Types
@@ -446,35 +452,31 @@ const MapRefocuser: React.FC<{ data: any }> = ({ data }) => {
     return null;
 };
 
-// UNIFIED COLOR LOGIC - Based on 24h Snow Accumulation
+// UNIFIED COLOR LOGIC - Now uses zoneStatusHelper for consistency
 // Level 0 (0-0.2cm): Green (Clear) - No label
 // Level 1 (0.2-0.9cm): Green with "Trace" label - Salting/Watch
 // Level 2 (1.0-4.9cm): Orange/Yellow - Residential Triggered
 // Level 3 (>=5.0cm): Red/Alert - Commercial Triggered (High Priority)
 const getColor = (data: WeatherData | undefined) => {
-    if (!data) return '#22c55e'; // Default green
-    
-    const snow24h = data.snowAccumulation24h || 0;
-    
-    if (snow24h >= 5.0) return '#ef4444'; // Level 3: Red - Commercial
-    if (snow24h >= 1.0) return '#f59e0b'; // Level 2: Orange - Residential  
-    return '#22c55e'; // Level 0 & 1: Green (Clear/Trace)
+    return getZoneColor(data);
 };
 
-// Get threshold level for labeling logic
+// Get threshold level for labeling logic - Now uses zoneStatusHelper
 const getSnowLevel = (snow24h: number): 0 | 1 | 2 | 3 => {
-    if (snow24h >= 5.0) return 3; // Commercial
-    if (snow24h >= 1.0) return 2; // Residential
-    if (snow24h >= 0.2) return 1; // Trace/Salting
-    return 0; // Clear
+    // Create mock data to use the unified helper
+    const mockData = { snowAccumulation24h: snow24h } as WeatherData;
+    return getZoneLevel(mockData);
 };
 
-// District GeoJSON Layer with Custom Pane
+// District GeoJSON Layer with Custom Pane - FOCUS MODE
+// Service zones: Full color, interactive
+// Non-service zones: Gray/faint background, non-interactive (or minimal)
 const DistrictLayer: React.FC<{
     geoJsonData: any;
     weatherData: Map<string, WeatherData>;
     onSelectNeighborhood: (feature: any) => void;
-}> = ({ geoJsonData, weatherData, onSelectNeighborhood }) => {
+    selectedZoneId?: string | null; // NEW: Track selected zone
+}> = ({ geoJsonData, weatherData, onSelectNeighborhood, selectedZoneId }) => {
     const map = useMap();
     const layerRef = useRef<L.GeoJSON | null>(null);
 
@@ -483,25 +485,93 @@ const DistrictLayer: React.FC<{
 
         if (layerRef.current) map.removeLayer(layerRef.current);
 
+        // Helper: Check if zone has any client properties
+        const hasClientProperties = (zoneName: string): boolean => {
+            return CLIENT_PROPERTIES.some(prop => prop.zone === zoneName);
+        };
+
         const style = (feature: any): L.PathOptions => {
+            const name = feature.properties.name;
             const id = feature.properties.id;
+            const isMyServiceZone = hasClientProperties(name); // NEW: Check if we have clients here
+            const isSelected = id === selectedZoneId;
+            
+            // Get weather data and color for all zones
             const data = weatherData.get(id);
             const color = getColor(data);
+            
+            // BACKGROUND ZONES (No clients here) - Ghost/faint style
+            if (!isMyServiceZone) {
+                return {
+                    fillColor: color, // Keep status color but very faint
+                    weight: 0.5, // Thin border
+                    opacity: 0.3,
+                    color: '#9ca3af', // Gray border
+                    fillOpacity: 0.15, // Very transparent
+                    pane: 'districtPane'
+                };
+            }
+            
+            // MY SERVICE ZONES (Active Territory) - Bright and prominent
+            // Debug log for zone matching
+            if (data) {
+                const status = getZoneStatus(data);
+                if (status.level >= 2) {
+                    console.log(`🗺️ My Zone: "${name}" | Status: ${status.label} | Snow: ${status.snow24h.toFixed(1)}cm | Color: ${color}`);
+                }
+            }
 
+            // SELECTED ZONE: Thick cyan glow border
+            if (isSelected) {
+                return {
+                    fillColor: color,
+                    weight: 5, // Extra thick for selected
+                    opacity: 1,
+                    color: '#06b6d4', // Cyan highlight
+                    fillOpacity: 0.7, // More opaque when selected
+                    pane: 'districtPane'
+                };
+            }
+
+            // Normal MY SERVICE ZONE style - Bright and prominent
             return {
                 fillColor: color,
-                weight: 2,
+                weight: 2, // Thick white border to pop
                 opacity: 1,
-                color: 'rgba(255, 255, 255, 0.9)',
-                fillOpacity: 0.35,
+                color: '#ffffff', // Solid white border
+                fillOpacity: 0.6, // Solid, easy to see
                 pane: 'districtPane'
             };
         };
 
         const onEachFeature = (feature: any, layer: L.Layer) => {
+            const name = feature.properties.name;
+            const isMyServiceZone = hasClientProperties(name);
             const id = feature.properties.id;
             const data = weatherData.get(id);
 
+            // BACKGROUND ZONES: Minimal interaction
+            if (!isMyServiceZone) {
+                layer.on({
+                    mouseover: (e) => {
+                        e.target.setStyle({ fillOpacity: 0.25 });
+                    },
+                    mouseout: (e) => {
+                        e.target.setStyle({ fillOpacity: 0.15 });
+                    }
+                });
+                // Optionally show name on hover
+                if (layer instanceof L.Polygon) {
+                    layer.bindTooltip(name, {
+                        permanent: false,
+                        direction: "center",
+                        className: "ghost-zone-label"
+                    });
+                }
+                return; // Skip full interaction for non-service zones
+            }
+
+            // SERVICE ZONES: Full interaction and labels
             // Labels based on 4-level snow threshold system
             // Level 0 (0-0.2cm): Green, NO label
             // Level 1 (0.2-0.9cm): Green, NO label (too cluttered)
@@ -534,11 +604,19 @@ const DistrictLayer: React.FC<{
             layer.on({
                 click: () => onSelectNeighborhood(feature),
                 mouseover: (e) => {
-                    e.target.setStyle({ weight: 3, color: '#ffffff', fillOpacity: 0.5 });
+                    // Don't change style if already selected
+                    if (feature.properties.id !== selectedZoneId) {
+                        e.target.setStyle({ weight: 3, color: '#ffffff', fillOpacity: 0.7 });
+                    }
                     e.target.bringToFront();
                 },
                 mouseout: (e) => {
-                    e.target.setStyle({ weight: 2, color: 'rgba(255, 255, 255, 0.9)', fillOpacity: 0.35 });
+                    // Restore appropriate style based on selection state
+                    if (feature.properties.id === selectedZoneId) {
+                        e.target.setStyle({ weight: 5, color: '#06b6d4', fillOpacity: 0.7 });
+                    } else {
+                        e.target.setStyle({ weight: 2, color: '#ffffff', fillOpacity: 0.6 });
+                    }
                 }
             });
         };
@@ -552,7 +630,112 @@ const DistrictLayer: React.FC<{
         return () => {
             if (layerRef.current) map.removeLayer(layerRef.current);
         };
-    }, [geoJsonData, weatherData, onSelectNeighborhood, map]);
+    }, [geoJsonData, weatherData, onSelectNeighborhood, map, selectedZoneId]); // Added selectedZoneId
+
+    return null;
+};
+
+// Map Reference Exposer - exposes map instance to parent
+const MapRefExposer: React.FC<{ mapRef?: React.MutableRefObject<L.Map | null> }> = ({ mapRef }) => {
+    const map = useMap();
+    useEffect(() => {
+        if (mapRef) {
+            mapRef.current = map;
+        }
+    }, [map, mapRef]);
+    return null;
+};
+
+// Property Markers Layer - Displays pins for client addresses
+const PropertyMarkersLayer: React.FC<{
+    weatherData: Map<string, WeatherData>;
+    geoJsonData: any;
+    selectedPropertyId?: string | null;
+    onSelectProperty?: (property: ClientProperty) => void;
+}> = ({ weatherData, geoJsonData, selectedPropertyId, onSelectProperty }) => {
+    const map = useMap();
+    const markersRef = useRef<L.LayerGroup | null>(null);
+
+    // Find zone ID from zone name
+    const getZoneIdFromName = (zoneName: string): string | undefined => {
+        if (!geoJsonData?.features) return undefined;
+        const feature = geoJsonData.features.find((f: any) => f.properties.name === zoneName);
+        return feature?.properties.id;
+    };
+
+    useEffect(() => {
+        if (!map) return;
+
+        // Remove existing markers
+        if (markersRef.current) {
+            map.removeLayer(markersRef.current);
+        }
+
+        // Create new layer group
+        markersRef.current = L.layerGroup();
+
+        // Add markers for each property
+        CLIENT_PROPERTIES.forEach(property => {
+            const zoneId = getZoneIdFromName(property.zone);
+            const data = zoneId ? weatherData.get(zoneId) : undefined;
+            const status = getZoneStatus(data);
+            const isSelected = property.id === selectedPropertyId;
+
+            // Create custom icon based on zone status color
+            const iconHtml = `
+                <div style="
+                    width: ${isSelected ? '16px' : '12px'};
+                    height: ${isSelected ? '16px' : '12px'};
+                    background-color: ${status.color};
+                    border: 2px solid ${isSelected ? '#06b6d4' : 'white'};
+                    border-radius: 50%;
+                    box-shadow: ${isSelected 
+                        ? '0 0 8px rgba(6, 182, 212, 0.8), 0 2px 6px rgba(0,0,0,0.3)' 
+                        : '0 2px 6px rgba(0,0,0,0.3)'};
+                    cursor: pointer;
+                    transition: all 0.2s;
+                "></div>
+            `;
+
+            const icon = L.divIcon({
+                html: iconHtml,
+                className: 'property-marker',
+                iconSize: [isSelected ? 20 : 16, isSelected ? 20 : 16],
+                iconAnchor: [isSelected ? 10 : 8, isSelected ? 10 : 8]
+            });
+
+            const marker = L.marker([property.lat, property.lng], { icon });
+
+            // Tooltip with address info
+            marker.bindTooltip(`
+                <div style="font-weight: 600; margin-bottom: 2px;">${property.address}</div>
+                <div style="font-size: 0.75rem; color: #6b7280;">${property.zone}</div>
+                <div style="font-size: 0.7rem; color: ${status.color}; font-weight: 600;">${status.label}</div>
+            `, {
+                permanent: false,
+                direction: 'top',
+                offset: [0, -8],
+                className: 'property-tooltip'
+            });
+
+            // Click handler
+            marker.on('click', () => {
+                if (onSelectProperty) {
+                    onSelectProperty(property);
+                }
+            });
+
+            markersRef.current?.addLayer(marker);
+        });
+
+        markersRef.current.addTo(map);
+
+        return () => {
+            if (markersRef.current) {
+                map.removeLayer(markersRef.current);
+            }
+        };
+    }, [map, weatherData, geoJsonData, selectedPropertyId, onSelectProperty]);
 
     return null;
 };
@@ -562,7 +745,11 @@ const SnowMap: React.FC<SnowMapProps> = ({
     geoJsonData,
     weatherData,
     showRadar,
-    onSelectNeighborhood
+    onSelectNeighborhood,
+    mapRef,
+    selectedZoneId,
+    selectedPropertyId,
+    onSelectProperty
 }) => {
     return (
         <MapContainer
@@ -572,6 +759,7 @@ const SnowMap: React.FC<SnowMapProps> = ({
             zoomControl={true}
         >
             <CustomPanesSetup />
+            <MapRefExposer mapRef={mapRef} />
 
             {/* Layer 1: Light Base Map (CartoDB Positron) */}
             <TileLayer
@@ -582,17 +770,26 @@ const SnowMap: React.FC<SnowMapProps> = ({
             {/* Layer 2: RainViewer Radar (radarPane, zIndex: 400) */}
             <RainViewerRadar enabled={showRadar} />
 
-            {/* Layer 3: District Polygons (districtPane, zIndex: 500) */}
+            {/* Layer 3: District Polygons (districtPane, zIndex: 500) - FOCUS MODE */}
             {geoJsonData && (
                 <>
                     <DistrictLayer
                         geoJsonData={geoJsonData}
                         weatherData={weatherData}
                         onSelectNeighborhood={onSelectNeighborhood}
+                        selectedZoneId={selectedZoneId}
                     />
                     <MapRefocuser data={geoJsonData} />
                 </>
             )}
+
+            {/* Layer 4: Property Markers (Pins) */}
+            <PropertyMarkersLayer
+                weatherData={weatherData}
+                geoJsonData={geoJsonData}
+                selectedPropertyId={selectedPropertyId}
+                onSelectProperty={onSelectProperty}
+            />
 
             <style>{`
                 .snow-label-apple {
@@ -607,6 +804,27 @@ const SnowMap: React.FC<SnowMapProps> = ({
                     font-family: -apple-system, BlinkMacSystemFont, sans-serif !important;
                 }
                 .snow-label-apple::before { display: none !important; }
+                .ghost-zone-label {
+                    background: rgba(148, 163, 184, 0.9) !important;
+                    border: none !important;
+                    border-radius: 4px !important;
+                    color: white !important;
+                    font-weight: 500 !important;
+                    font-size: 10px !important;
+                    padding: 2px 6px !important;
+                    box-shadow: none !important;
+                }
+                .ghost-zone-label::before { display: none !important; }
+                .property-marker { background: transparent !important; border: none !important; }
+                .property-tooltip {
+                    background: rgba(255, 255, 255, 0.98) !important;
+                    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+                    border-radius: 8px !important;
+                    padding: 8px 12px !important;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+                    font-family: -apple-system, BlinkMacSystemFont, sans-serif !important;
+                }
+                .property-tooltip::before { display: none !important; }
                 .leaflet-container { background: #f8fafc; }
                 .radar-tile-layer { transition: opacity 0.3s ease-out; }
                 .radar-spinner {
