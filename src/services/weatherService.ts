@@ -9,7 +9,7 @@ const BASE_URL = 'https://api.open-meteo.com/v1/forecast';
 // ============= FALLBACK MODE =============
 // Set to true to use mock data when API is rate-limited (429 errors)
 // Set to false to use real API calls
-const USE_MOCK_DATA = true; // Toggle this when API limits reset
+const USE_MOCK_DATA = false; // Toggle this when API limits reset
 
 // ============= CACHE SYSTEM =============
 // Cache weather data for 30 minutes to reduce API calls significantly
@@ -353,7 +353,7 @@ export const fetchWeatherBatch = async (locations: { id: string; lat: number; lo
                 longitude: lons,
                 current: 'temperature_2m,snowfall,apparent_temperature,wind_gusts_10m',
                 hourly: 'snowfall,snow_depth,temperature_2m',
-                forecast_days: 1,
+                forecast_days: 2, // Need 2 days to ensure 24h coverage from any hour
                 timezone: 'America/Winnipeg'
             });
 

@@ -156,7 +156,8 @@ const NeighborhoodDetail: React.FC<NeighborhoodDetailProps> = ({ name, data, for
     };
 
     const snow24h = data?.snowAccumulation24h || 0;
-    const future24hSnow = calculateFuture24hSnow();
+    // Use snow24h from map data as the authoritative source (it's already calculated correctly)
+    const future24hSnow = snow24h; // This ensures consistency between Section A and Section B
     const snowStopTime = calculateSnowStopTime();
     const thresholdStatus = getThresholdStatus(snow24h);
     const currentSnowRate = getCurrentSnowRate();
