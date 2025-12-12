@@ -468,6 +468,54 @@ const getSnowLevel = (snow24h: number): 0 | 1 | 2 | 3 => {
     return getZoneLevel(mockData);
 };
 
+/**
+ * Point-in-Polygon Check using Ray Casting Algorithm
+ * Returns true if point (lat, lng) is inside the polygon
+ */
+const isPointInPolygon = (lat: number, lng: number, polygon: number[][]): boolean => {
+    let inside = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const xi = polygon[i][0], yi = polygon[i][1];
+        const xj = polygon[j][0], yj = polygon[j][1];
+        
+        const intersect = ((yi > lng) !== (yj > lng))
+            && (lat < (xj - xi) * (lng - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+};
+
+/**
+ * Check if any client property point falls within a GeoJSON feature
+ * Works with Polygon and MultiPolygon geometries
+ */
+const featureContainsClientProperty = (feature: any): boolean => {
+    if (!feature?.geometry) return false;
+    
+    const geometry = feature.geometry;
+    
+    for (const prop of CLIENT_PROPERTIES) {
+        const lat = prop.lat;
+        const lng = prop.lng;
+        
+        if (geometry.type === 'Polygon') {
+            // GeoJSON coordinates are [lng, lat], so we check against [lng, lat] order
+            const coords = geometry.coordinates[0]; // Outer ring
+            if (isPointInPolygon(lng, lat, coords)) {
+                return true;
+            }
+        } else if (geometry.type === 'MultiPolygon') {
+            for (const poly of geometry.coordinates) {
+                const coords = poly[0]; // Outer ring of each polygon
+                if (isPointInPolygon(lng, lat, coords)) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+};
+
 // District GeoJSON Layer with Custom Pane - FOCUS MODE
 // Service zones: Full color, interactive
 // Non-service zones: Gray/faint background, non-interactive (or minimal)
@@ -485,15 +533,27 @@ const DistrictLayer: React.FC<{
 
         if (layerRef.current) map.removeLayer(layerRef.current);
 
-        // Helper: Check if zone has any client properties
-        const hasClientProperties = (zoneName: string): boolean => {
-            return CLIENT_PROPERTIES.some(prop => prop.zone === zoneName);
+        // DYNAMIC SERVICE ZONE DETECTION
+        // Pre-compute which zones contain client property pins (point-in-polygon)
+        // This is cached per render to avoid recalculating for each feature
+        const serviceZoneIds = new Set<string>();
+        for (const feature of geoJsonData.features) {
+            if (featureContainsClientProperty(feature)) {
+                serviceZoneIds.add(feature.properties.id);
+                console.log(`✅ Service Zone Detected: "${feature.properties.name}" (contains client pins)`);
+            }
+        }
+        console.log(`📍 Total Service Zones with Pins: ${serviceZoneIds.size}`);
+
+        // Helper: Check if zone contains any client properties (DYNAMIC - geometry-based)
+        const hasClientProperties = (featureId: string): boolean => {
+            return serviceZoneIds.has(featureId);
         };
 
         const style = (feature: any): L.PathOptions => {
             const name = feature.properties.name;
             const id = feature.properties.id;
-            const isMyServiceZone = hasClientProperties(name); // NEW: Check if we have clients here
+            const isMyServiceZone = hasClientProperties(id); // DYNAMIC: Uses point-in-polygon detection
             const isSelected = id === selectedZoneId;
             
             // Get weather data and color for all zones
@@ -546,8 +606,8 @@ const DistrictLayer: React.FC<{
 
         const onEachFeature = (feature: any, layer: L.Layer) => {
             const name = feature.properties.name;
-            const isMyServiceZone = hasClientProperties(name);
             const id = feature.properties.id;
+            const isMyServiceZone = hasClientProperties(id); // DYNAMIC: Uses point-in-polygon detection
             const data = weatherData.get(id);
 
             // BACKGROUND ZONES: Minimal interaction
