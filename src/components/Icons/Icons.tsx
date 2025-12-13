@@ -174,3 +174,26 @@ export const SpinnerIcon: React.FC<IconProps> = ({ size = 24, color = 'currentCo
         <path d="M12 2C6.47715 2 2 6.47715 2 12" stroke={color} strokeWidth="4" strokeLinecap="round"/>
     </svg>
 );
+
+// Menu Icon (hamburger menu for mobile)
+export const MenuIcon: React.FC<IconProps> = ({ size = 24, color = 'currentColor', className = '' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+        <line x1="3" y1="6" x2="21" y2="6" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+        <line x1="3" y1="12" x2="21" y2="12" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+        <line x1="3" y1="18" x2="21" y2="18" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+);
+
+// Chevron Up Icon (for bottom sheet)
+export const ChevronUpIcon: React.FC<IconProps> = ({ size = 24, color = 'currentColor', className = '' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+        <path d="M18 15L12 9L6 15" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+);
+
+// Chevron Down Icon (for bottom sheet)
+export const ChevronDownIcon: React.FC<IconProps> = ({ size = 24, color = 'currentColor', className = '' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+        <path d="M6 9L12 15L18 9" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+);

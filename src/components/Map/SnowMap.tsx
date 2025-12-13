@@ -17,6 +17,7 @@ import L from 'leaflet';
 import type { WeatherData } from '../../services/weatherService';
 import { CLIENT_PROPERTIES, type ClientProperty } from '../../config/clientProperties';
 import { getZoneStatus, getZoneColor, getZoneLevel } from '../../utils/zoneStatusHelper';
+import type { SyntheticZone } from '../../utils/syntheticZones';
 
 interface SnowMapProps {
     geoJsonData: any;
@@ -25,8 +26,9 @@ interface SnowMapProps {
     onSelectNeighborhood: (feature: any) => void;
     mapRef?: React.MutableRefObject<L.Map | null>;
     selectedZoneId?: string | null; // Track selected zone for highlighting
-    selectedPropertyId?: string | null; // NEW: Track selected property for highlighting
-    onSelectProperty?: (property: ClientProperty) => void; // NEW: Property click handler
+    selectedPropertyId?: string | null; // Track selected property for highlighting
+    onSelectProperty?: (property: ClientProperty) => void; // Property click handler
+    syntheticZones?: SyntheticZone[]; // NEW: Bubble zones for orphan addresses
 }
 
 // RainViewer API Types
@@ -800,6 +802,111 @@ const PropertyMarkersLayer: React.FC<{
     return null;
 };
 
+// Synthetic Bubble Zones Layer - Displays circle zones for orphan addresses
+const SyntheticZonesLayer: React.FC<{
+    syntheticZones: SyntheticZone[];
+    weatherData: Map<string, WeatherData>;
+    onSelectNeighborhood: (feature: any) => void;
+    selectedZoneId?: string | null;
+}> = ({ syntheticZones, weatherData, onSelectNeighborhood, selectedZoneId }) => {
+    const map = useMap();
+    const layerRef = useRef<L.GeoJSON | null>(null);
+
+    useEffect(() => {
+        if (!map || syntheticZones.length === 0) return;
+
+        // Remove existing layer
+        if (layerRef.current) {
+            map.removeLayer(layerRef.current);
+        }
+
+        // Convert synthetic zones to GeoJSON features
+        const features = syntheticZones.map(zone => ({
+            type: 'Feature' as const,
+            properties: {
+                id: zone.id,
+                name: zone.name,
+                isSynthetic: true,
+                properties: zone.properties
+            },
+            geometry: zone.geometry
+        }));
+
+        const geoJsonData = {
+            type: 'FeatureCollection',
+            features
+        };
+
+        // Create GeoJSON layer with bubble zone styling
+        layerRef.current = L.geoJSON(geoJsonData as any, {
+            pane: 'districtPane',
+            style: (feature) => {
+                const zoneId = feature?.properties?.id;
+                const data = zoneId ? weatherData.get(zoneId) : undefined;
+                const status = getZoneStatus(data);
+                const isSelected = zoneId === selectedZoneId;
+                
+                return {
+                    fillColor: status.color,
+                    fillOpacity: isSelected ? 0.55 : 0.35,
+                    color: isSelected ? '#06b6d4' : status.color,
+                    weight: isSelected ? 3 : 2,
+                    opacity: isSelected ? 1 : 0.7,
+                    dashArray: '6, 4' // Dashed border to distinguish synthetic zones
+                };
+            },
+            onEachFeature: (feature, layer) => {
+                // Add tooltip with zone name
+                layer.bindTooltip(
+                    `<div style="text-align:center;">
+                        <div style="font-weight:600;margin-bottom:2px;">${feature.properties.name}</div>
+                        <div style="font-size:0.7rem;color:#6b7280;">Remote Zone</div>
+                    </div>`,
+                    { 
+                        permanent: false, 
+                        direction: 'center',
+                        className: 'snow-label-apple'
+                    }
+                );
+
+                // Click handler
+                layer.on('click', () => {
+                    onSelectNeighborhood({
+                        ...feature,
+                        properties: {
+                            ...feature.properties,
+                            isSynthetic: true
+                        }
+                    });
+                });
+
+                // Hover effects
+                layer.on('mouseover', () => {
+                    (layer as L.Path).setStyle({
+                        fillOpacity: 0.5,
+                        weight: 3
+                    });
+                });
+                layer.on('mouseout', () => {
+                    const isSelected = feature.properties.id === selectedZoneId;
+                    (layer as L.Path).setStyle({
+                        fillOpacity: isSelected ? 0.55 : 0.35,
+                        weight: isSelected ? 3 : 2
+                    });
+                });
+            }
+        }).addTo(map);
+
+        return () => {
+            if (layerRef.current) {
+                map.removeLayer(layerRef.current);
+            }
+        };
+    }, [map, syntheticZones, weatherData, onSelectNeighborhood, selectedZoneId]);
+
+    return null;
+};
+
 // Main SnowMap Component
 const SnowMap: React.FC<SnowMapProps> = ({
     geoJsonData,
@@ -809,7 +916,8 @@ const SnowMap: React.FC<SnowMapProps> = ({
     mapRef,
     selectedZoneId,
     selectedPropertyId,
-    onSelectProperty
+    onSelectProperty,
+    syntheticZones = []
 }) => {
     return (
         <MapContainer
@@ -841,6 +949,16 @@ const SnowMap: React.FC<SnowMapProps> = ({
                     />
                     <MapRefocuser data={geoJsonData} />
                 </>
+            )}
+
+            {/* Layer 3.5: Synthetic Bubble Zones (for orphan addresses) */}
+            {syntheticZones.length > 0 && (
+                <SyntheticZonesLayer
+                    syntheticZones={syntheticZones}
+                    weatherData={weatherData}
+                    onSelectNeighborhood={onSelectNeighborhood}
+                    selectedZoneId={selectedZoneId}
+                />
             )}
 
             {/* Layer 4: Property Markers (Pins) */}
