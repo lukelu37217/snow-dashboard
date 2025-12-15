@@ -18,6 +18,7 @@ import type { WeatherData } from '../../services/weatherService';
 import { CLIENT_PROPERTIES, type ClientProperty } from '../../config/clientProperties';
 import { getZoneStatus, getZoneColor, getZoneLevel } from '../../utils/zoneStatusHelper';
 import type { SyntheticZone } from '../../utils/syntheticZones';
+import { isInOperationalArea } from '../../config/westernSector';
 
 interface SnowMapProps {
     geoJsonData: any;
@@ -50,7 +51,7 @@ const CustomPanesSetup: React.FC = () => {
 
     useEffect(() => {
         // Create custom panes with specific z-index values
-        // Order: Base Map (200) -> Districts (400) -> Radar (450) -> Labels (500)
+        // Order: Base Map (200) -> Districts (400) -> Radar (450) -> Labels (500) -> Markers (600)
         if (!map.getPane('districtPane')) {
             const districtPane = map.createPane('districtPane');
             districtPane.style.zIndex = '400';
@@ -67,6 +68,13 @@ const CustomPanesSetup: React.FC = () => {
             const labelsPane = map.createPane('labelsPane');
             labelsPane.style.zIndex = '500';
             labelsPane.style.pointerEvents = 'none';
+        }
+
+        // NEW: Markers pane with highest z-index for mobile visibility
+        if (!map.getPane('markersPane')) {
+            const markersPane = map.createPane('markersPane');
+            markersPane.style.zIndex = '600'; // Above everything else
+            markersPane.style.pointerEvents = 'auto'; // Markers are clickable
         }
     }, [map]);
 
@@ -518,9 +526,10 @@ const featureContainsClientProperty = (feature: any): boolean => {
     return false;
 };
 
-// District GeoJSON Layer with Custom Pane - FOCUS MODE
-// Service zones: Full color, interactive
-// Non-service zones: Gray/faint background, non-interactive (or minimal)
+// District GeoJSON Layer with Custom Pane - 3-TIER VISUAL HIERARCHY
+// Tier 1: Service Zones (My Clients) - Full color, prominent, shows pins
+// Tier 2: Context Zones (Western Sector) - Lighter fill, clickable with weather
+// Tier 3: Outside Zones - Ghost/hidden, minimal interaction
 const DistrictLayer: React.FC<{
     geoJsonData: any;
     weatherData: Map<string, WeatherData>;
@@ -542,10 +551,9 @@ const DistrictLayer: React.FC<{
         for (const feature of geoJsonData.features) {
             if (featureContainsClientProperty(feature)) {
                 serviceZoneIds.add(feature.properties.id);
-                console.log(`✅ Service Zone Detected: "${feature.properties.name}" (contains client pins)`);
             }
         }
-        console.log(`📍 Total Service Zones with Pins: ${serviceZoneIds.size}`);
+        console.log(`📍 Tier 1 Service Zones (with pins): ${serviceZoneIds.size}`);
 
         // Helper: Check if zone contains any client properties (DYNAMIC - geometry-based)
         const hasClientProperties = (featureId: string): boolean => {
@@ -553,36 +561,51 @@ const DistrictLayer: React.FC<{
         };
 
         const style = (feature: any): L.PathOptions => {
-            const name = feature.properties.name;
             const id = feature.properties.id;
-            const isMyServiceZone = hasClientProperties(id); // DYNAMIC: Uses point-in-polygon detection
+            const isMyServiceZone = hasClientProperties(id); // Tier 1: Has client pins
+            const isContextZone = isInOperationalArea(feature); // Tier 2: In Western Sector
             const isSelected = id === selectedZoneId;
             
             // Get weather data and color for all zones
             const data = weatherData.get(id);
             const color = getColor(data);
             
-            // BACKGROUND ZONES (No clients here) - Ghost/faint style
-            if (!isMyServiceZone) {
+            // TIER 3: OUTSIDE ZONES (Not in Western Sector) - Ghost/hidden
+            if (!isMyServiceZone && !isContextZone) {
                 return {
-                    fillColor: color, // Keep status color but very faint
-                    weight: 0.5, // Thin border
-                    opacity: 0.3,
-                    color: '#9ca3af', // Gray border
-                    fillOpacity: 0.15, // Very transparent
+                    fillColor: '#e5e7eb', // Neutral gray
+                    weight: 0.3,
+                    opacity: 0.2,
+                    color: '#9ca3af',
+                    fillOpacity: 0.05, // Almost invisible
                     pane: 'districtPane'
                 };
             }
             
-            // MY SERVICE ZONES (Active Territory) - Bright and prominent
-            // Debug log for zone matching
-            if (data) {
-                const status = getZoneStatus(data);
-                if (status.level >= 2) {
-                    console.log(`🗺️ My Zone: "${name}" | Status: ${status.label} | Snow: ${status.snow24h.toFixed(1)}cm | Color: ${color}`);
+            // TIER 2: CONTEXT ZONES (In Western Sector, no clients) - Clickable but lighter
+            if (!isMyServiceZone && isContextZone) {
+                if (isSelected) {
+                    return {
+                        fillColor: color,
+                        weight: 4,
+                        opacity: 1,
+                        color: '#06b6d4', // Cyan highlight
+                        fillOpacity: 0.5,
+                        pane: 'districtPane'
+                    };
                 }
+                return {
+                    fillColor: color,
+                    weight: 1,
+                    opacity: 0.6,
+                    color: '#94a3b8', // Slate gray border
+                    dashArray: '4, 4', // Dashed border to distinguish
+                    fillOpacity: 0.25, // Lighter than service zones
+                    pane: 'districtPane'
+                };
             }
-
+            
+            // TIER 1: MY SERVICE ZONES (Active Territory) - Bright and prominent
             // SELECTED ZONE: Thick cyan glow border
             if (isSelected) {
                 return {
@@ -595,7 +618,7 @@ const DistrictLayer: React.FC<{
                 };
             }
 
-            // Normal MY SERVICE ZONE style - Bright and prominent
+            // Normal SERVICE ZONE style - Bright and prominent
             return {
                 fillColor: color,
                 weight: 2, // Thick white border to pop
@@ -609,20 +632,18 @@ const DistrictLayer: React.FC<{
         const onEachFeature = (feature: any, layer: L.Layer) => {
             const name = feature.properties.name;
             const id = feature.properties.id;
-            const isMyServiceZone = hasClientProperties(id); // DYNAMIC: Uses point-in-polygon detection
+            const isMyServiceZone = hasClientProperties(id);
+            const isContextZone = isInOperationalArea(feature);
             const data = weatherData.get(id);
 
-            // BACKGROUND ZONES: Minimal interaction
-            if (!isMyServiceZone) {
-                layer.on({
-                    mouseover: (e) => {
-                        e.target.setStyle({ fillOpacity: 0.25 });
-                    },
-                    mouseout: (e) => {
-                        e.target.setStyle({ fillOpacity: 0.15 });
-                    }
-                });
-                // Optionally show name on hover
+            // TIER 3: OUTSIDE ZONES - No interaction (skip entirely)
+            if (!isMyServiceZone && !isContextZone) {
+                return;
+            }
+
+            // TIER 2: CONTEXT ZONES - Clickable with weather popup
+            if (!isMyServiceZone && isContextZone) {
+                // Tooltip shows zone name
                 if (layer instanceof L.Polygon) {
                     layer.bindTooltip(name, {
                         permanent: false,
@@ -630,21 +651,42 @@ const DistrictLayer: React.FC<{
                         className: "ghost-zone-label"
                     });
                 }
-                return; // Skip full interaction for non-service zones
+                
+                // CLICKABLE: Opens weather popup
+                layer.on({
+                    click: () => onSelectNeighborhood(feature),
+                    mouseover: (e) => {
+                        if (feature.properties.id !== selectedZoneId) {
+                            e.target.setStyle({ 
+                                fillOpacity: 0.4, 
+                                weight: 2, 
+                                color: '#64748b' 
+                            });
+                        }
+                    },
+                    mouseout: (e) => {
+                        if (feature.properties.id === selectedZoneId) {
+                            e.target.setStyle({ weight: 4, color: '#06b6d4', fillOpacity: 0.5 });
+                        } else {
+                            e.target.setStyle({ 
+                                fillOpacity: 0.25, 
+                                weight: 1, 
+                                color: '#94a3b8',
+                                dashArray: '4, 4'
+                            });
+                        }
+                    }
+                });
+                return;
             }
 
-            // SERVICE ZONES: Full interaction and labels
+            // TIER 1: SERVICE ZONES - Full interaction and labels
             // Labels based on 4-level snow threshold system
-            // Level 0 (0-0.2cm): Green, NO label
-            // Level 1 (0.2-0.9cm): Green, NO label (too cluttered)
-            // Level 2 (1-4.9cm): Orange, show value (e.g., "2.5 cm")
-            // Level 3 (>=5cm): Red, show value (e.g., "6.0 cm")
             if (layer instanceof L.Polygon && data && data.snowAccumulation24h !== undefined) {
                 const snow24h = data.snowAccumulation24h;
                 const level = getSnowLevel(snow24h);
                 
                 if (level === 2) {
-                    // Level 2: Residential (orange) - show value
                     layer.bindTooltip(`${snow24h.toFixed(1)} cm`, {
                         permanent: true,
                         direction: "center",
@@ -652,7 +694,6 @@ const DistrictLayer: React.FC<{
                         pane: 'labelsPane'
                     });
                 } else if (level === 3) {
-                    // Level 3: Commercial (red) - show value with emphasis
                     layer.bindTooltip(`${snow24h.toFixed(1)} cm`, {
                         permanent: true,
                         direction: "center",
@@ -660,20 +701,17 @@ const DistrictLayer: React.FC<{
                         pane: 'labelsPane'
                     });
                 }
-                // Level 0 & 1: No label (clear/trace zones - keeps map clean)
             }
 
             layer.on({
                 click: () => onSelectNeighborhood(feature),
                 mouseover: (e) => {
-                    // Don't change style if already selected
                     if (feature.properties.id !== selectedZoneId) {
                         e.target.setStyle({ weight: 3, color: '#ffffff', fillOpacity: 0.7 });
                     }
                     e.target.bringToFront();
                 },
                 mouseout: (e) => {
-                    // Restore appropriate style based on selection state
                     if (feature.properties.id === selectedZoneId) {
                         e.target.setStyle({ weight: 5, color: '#06b6d4', fillOpacity: 0.7 });
                     } else {
@@ -766,7 +804,11 @@ const PropertyMarkersLayer: React.FC<{
                 iconAnchor: [isSelected ? 10 : 8, isSelected ? 10 : 8]
             });
 
-            const marker = L.marker([property.lat, property.lng], { icon });
+            // Use markersPane for higher z-index (fixes mobile visibility)
+            const marker = L.marker([property.lat, property.lng], { 
+                icon,
+                pane: 'markersPane'
+            });
 
             // Tooltip with address info
             marker.bindTooltip(`

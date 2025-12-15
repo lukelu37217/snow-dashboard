@@ -26,6 +26,7 @@ import {
   getHourlyForecast 
 } from './services/weatherCanadaService';
 import { isServiceZone } from './config/serviceZones';
+import { isInOperationalArea } from './config/westernSector';
 import { type ClientProperty, CLIENT_PROPERTIES } from './config/clientProperties';
 import { getZoneStatus } from './utils/zoneStatusHelper';
 import { 
@@ -73,7 +74,7 @@ function App() {
     
     try {
       // 1. Load ALL GeoJSON zones (for map context/background)
-      // Also create filtered list for weather API calls (service zones only)
+      // Also create filtered list for weather API calls
       if (!geoData) {
         const response = await fetch('/winnipeg-neighbourhoods.geojson');
         const fullData = await response.json();
@@ -85,17 +86,23 @@ function App() {
         const bubbleZones = generateSyntheticZones(fullData.features);
         setSyntheticZones(bubbleZones);
         
-        // Filter to only service zones for API calls (reduces from ~240 to ~50 zones)
+        // Filter to service zones for the sidebar/metrics
         const serviceZonesData = {
           ...fullData,
           features: fullData.features.filter((f: any) => isServiceZone(f.properties.name))
         };
         setServiceGeoData(serviceZonesData);
         
-        console.log(`📍 Map zones: ${fullData.features.length} | Service zones: ${serviceZonesData.features.length} | Bubble zones: ${bubbleZones.length}`);
+        // WESTERN SECTOR: Fetch weather for ALL zones in operational area
+        // This enables clicking on context zones to see their weather
+        const westernSectorFeatures = fullData.features.filter((f: any) => 
+          isServiceZone(f.properties.name) || isInOperationalArea(f)
+        );
         
-        // HYBRID BATCH FETCHING: Include zone centroids + synthetic zone centroids
-        const zoneLocations = serviceZonesData.features.map((f: any) => {
+        console.log(`📍 Map zones: ${fullData.features.length} | Western Sector: ${westernSectorFeatures.length} | Bubble zones: ${bubbleZones.length}`);
+        
+        // HYBRID BATCH FETCHING: Western Sector zones + synthetic zone centroids
+        const zoneLocations = westernSectorFeatures.map((f: any) => {
           const centroid = getCentroid(f.geometry);
           return { id: f.properties.id, lat: centroid?.lat || 0, lon: centroid?.lon || 0 };
         }).filter((l: any) => l.lat !== 0);
@@ -109,17 +116,19 @@ function App() {
         
         // Combine all locations for batch API call
         const allLocations = [...zoneLocations, ...bubbleLocations];
-        console.log(`🌡️ Fetching weather for ${allLocations.length} locations (${zoneLocations.length} zones + ${bubbleLocations.length} bubbles)`);
+        console.log(`🌡️ Fetching weather for ${allLocations.length} locations (${zoneLocations.length} Western Sector zones + ${bubbleLocations.length} bubbles)`);
 
         const weatherResults = await fetchWeatherBatch(allLocations, forceRefresh);
         const map = new Map<string, WeatherData>();
         weatherResults.forEach(w => map.set(w.id, w));
         setWeatherMap(map);
       } else {
-        // Refresh: use existing serviceGeoData + synthetic zones
-        const zoneLocations = (serviceGeoData || geoData).features
-          .filter((f: any) => isServiceZone(f.properties.name))
-          .map((f: any) => {
+        // Refresh: use existing geoData and get Western Sector zones
+        const westernSectorFeatures = geoData.features.filter((f: any) => 
+          isServiceZone(f.properties.name) || isInOperationalArea(f)
+        );
+        
+        const zoneLocations = westernSectorFeatures.map((f: any) => {
             const centroid = getCentroid(f.geometry);
             return { id: f.properties.id, lat: centroid?.lat || 0, lon: centroid?.lon || 0 };
           }).filter((l: any) => l.lat !== 0);

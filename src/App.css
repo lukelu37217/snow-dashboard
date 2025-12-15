@@ -287,9 +287,18 @@ button:focus-visible, a:focus-visible {
         font-size: 20px !important;
     }
     
+    /* MOBILE: Zoom controls move to bottom-right */
     .leaflet-control-zoom {
-        margin-top: 80px !important; /* Below hamburger */
-        margin-left: 16px !important;
+        position: fixed !important;
+        bottom: 100px !important;
+        right: 16px !important;
+        left: auto !important;
+        top: auto !important;
+        margin: 0 !important;
+        z-index: 999 !important;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15) !important;
+        border-radius: 8px !important;
+        overflow: hidden !important;
     }
     
     /* Hide forecast bar on mobile - too cluttered */
