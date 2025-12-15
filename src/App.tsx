@@ -363,6 +363,8 @@ function App() {
           selectedZoneId={selectedZoneId}
           onSelectZone={handleSelect}
           selectedFeature={selectedFeature}
+          forecast={cityWeather?.forecast || null}
+          ecForecast={ecForecast}
         />
       </div>
     );
