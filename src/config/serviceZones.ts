@@ -67,63 +67,62 @@
  * Whitelist of neighborhood names to render
  * These match the 'name' property in winnipeg-neighbourhoods.geojson
  * 
- * Updated: December 15, 2025 - Synced with clientProperties.ts zones
+ * CLASSIFICATION: Kevin Moist Real Estate Style
+ * Updated: December 15, 2025
+ * 
+ * Key distinction:
+ * - Headingley: Premium standalone area (RM of Headingley)
+ * - Winnipeg: All areas within city limits
  */
 export const SERVICE_ZONE_WHITELIST: string[] = [
-    // === HEADINGLEY (RM - Outside Winnipeg) ===
-    'Headingley South', // Taylor Farm, Charlesglen, Wescana, Roblin Blvd west
-    'Headingley North', // Deer Pointe, Seekings, Portage Ave west
+    // === HEADINGLEY (RM - Premium Standalone Area) ===
+    'Headingley South', // Taylor Farm, Charlesglen, Wescana, South Headingley, Assiniboine Landing
+    'Headingley North', // Deer Pointe, Seekings, Portage Ave west of Perimeter
     
-    // === CHARLESWOOD CLUSTER ===
-    'Ridgedale',        // Ridgedale Cres addresses, 4515 Roblin
-    'Betsworth',        // 22 Matlock Crescent
+    // === CHARLESWOOD CLUSTER (Inside Winnipeg) ===
+    'Ridgedale',        // Ridgedale Cres, 4515 Roblin
+    'Betsworth',        // 330 Risbey Crescent, 22 Matlock Crescent
     'Southboine',       // 26 Orchard Park Boulevard
-    'Elmhurst',         // 52 Southwick, 70 Ascot Bay, 3420 Grant
+    'Elmhurst',         // 52 Southwick, 3420 Grant Ave
     'Roblin Park',      // Near Roblin Blvd inside Winnipeg
     
     // === TUXEDO AREA ===
-    'Tuxedo',           // 424 Hosmer, 31 Hermitage, 6 Hermitage, 60 Eagle
-    'South Tuxedo',     // 53 Litchfield, 1 Kerslake, 710 Park Blvd S
+    'Tuxedo',           // 424 Hosmer Blvd
+    'South Tuxedo',     // Kerslake, Litchfield, Park Blvd S, Ascot Bay
     'Mathers',          // 700-750 Kenaston Blvd
     'Old Tuxedo',       // Historic Tuxedo
     
     // === RIVER HEIGHTS / CRESCENTWOOD ===
-    'Crescentwood',     // 201 Dromore, 516 Rodney St
+    'Crescentwood',     // 201 Dromore Avenue
     'Earl Grey',        // 300 Stafford Street
     'Wellington Crescent',
     'River Heights',
     
-    // === FORT GARRY ===
-    'Wildwood',         // 5 Livingston Way
-    'Waverley Heights', // 2 Augusta Drive
-    'Richmond West',    // 3 Glenacres Crescent
-    'West Fort Garry Industrial', // 95 Scurfield Blvd
-    'Whyte Ridge',
-    
     // === ST. JAMES-ASSINIBOIA ===
-    'Crestview',        // 109 Carberry Cres
     'Silver Heights',   // 466 Ainslie Street
-    'Westwood',         // 29 Kemper
+    'Deer Lodge',       // 300 Sharp Blvd
+    'Crestview',        // 109 Carberry Cres
     'Kirkfield',        // 3074 Portage Ave
     'Glendale',         // 3740 Portage Ave
-    'Buchanan',         // 330 Risbey Crescent
-    'Airport',          // 300 Sharp Blvd
     
     // === COMMERCIAL / INDUSTRIAL ===
-    'King Edward',              // 487 King Edward St
-    'St. James Industrial',     // 830 King Edward, 1695 Ellice, 1835 Sargent, 1369 Border
+    'King Edward',              // 487, 830 King Edward St
+    'St. James Industrial',     // Ellice, Sargent, Border, Eagle Dr
     'Murray Industrial Park',   // 180 Cree Crescent
     'Saskatchewan North',       // 2800 Saskatchewan Ave
-    "Omand's Creek Industrial", // 2070, 2078, 2150 Logan Ave
-    'Inkster Industrial Park',  // 1438 Church, 1535 Burrows
-    'Leila North',              // 1255, 1265, 1275 Leila Ave
+    "Omand's Creek Industrial", // Logan Ave
+    'Inkster Industrial Park',  // Church, Burrows
+    'Leila North',              // 1255-1275 Leila Ave
+    
+    // === SOUTH WINNIPEG ===
+    'West Fort Garry Industrial', // 95 Scurfield
+    'Whyte Ridge',
+    'Waverley Heights',         // 2 Augusta Drive
+    'Richmond West',            // 3 Glenacres Crescent
     
     // === ADDITIONAL COVERAGE (neighboring zones) ===
-    'Assiniboia Downs',  // 355 Dodds Road, 5392 Portage Ave
-    'Tuxedo Industrial', // 5 Livingston Way
-    'Birchwood',         // 29 Kemper
+    'Assiniboia Downs',  // 355 Dodds Road, 5392 Portage Ave (edge of Headingley)
     'Sturgeon Creek',
-    'Deer Lodge',
     'Bruce Park',
     'Varsity View',
     'Polo Park',
@@ -131,6 +130,7 @@ export const SERVICE_ZONE_WHITELIST: string[] = [
     'Garden City',
     'Brooklands',
     'Weston',
+    'Airport',           // 300 Sharp Blvd, 60 Eagle Drive
 ];
 
 /**
