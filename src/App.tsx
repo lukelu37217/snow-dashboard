@@ -7,9 +7,8 @@ import GlobalForecastBar from './components/Weather/GlobalForecastBarApple';
 import Header from './components/Dashboard/Header';
 import MetricsCards from './components/Dashboard/MetricsCards';
 import PropertyList from './components/Dashboard/PropertyList';
-import MobileDrawer from './components/Mobile/MobileDrawer';
-import MobileBottomSheet from './components/Mobile/MobileBottomSheet';
-import { LayersIcon, MenuIcon } from './components/Icons/Icons';
+import MobileDriverMode from './components/Mobile/MobileDriverMode';
+import { LayersIcon } from './components/Icons/Icons';
 import useMobile from './hooks/useMobile';
 
 import { getCentroid } from './services/geoUtils';
@@ -58,9 +57,7 @@ function App() {
   const [showRadar, setShowRadar] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string>("--:--");
   
-  // Mobile-specific state
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
+  // Mobile-specific state - Driver Mode uses its own internal state
 
   const refreshData = async (forceRefresh = false) => {
     if (isRefreshing) return;
@@ -175,10 +172,6 @@ function App() {
   const handleSelect = (feature: any) => {
     setSelectedFeature(feature);
     setSelectedZoneId(feature?.properties?.id || null);
-    // Open bottom sheet on mobile
-    if (isMobile) {
-      setIsBottomSheetOpen(true);
-    }
   };
 
   // Handler for clicking on sidebar items - flies to zone, highlights, and opens detail
@@ -207,11 +200,7 @@ function App() {
         }
       }
       
-      // Close sidebar and open bottom sheet on mobile
-      if (isMobile) {
-        setIsSidebarOpen(false);
-        setIsBottomSheetOpen(true);
-      }
+
     } else if (syntheticFeature) {
       // Handle synthetic bubble zone selection
       const data = weatherMap.get(id);
@@ -228,10 +217,6 @@ function App() {
         mapRef.current.flyTo([syntheticFeature.lat, syntheticFeature.lng], 15, { duration: 1 });
       }
       
-      if (isMobile) {
-        setIsSidebarOpen(false);
-        setIsBottomSheetOpen(true);
-      }
     } else {
       console.warn(`⚠️ Zone ID "${id}" not found in geoData or synthetic zones!`);
     }
@@ -254,12 +239,6 @@ function App() {
     if (mapRef.current) {
       mapRef.current.flyTo([property.lat, property.lng], 16, { duration: 1 });
     }
-    
-    // Close sidebar and open bottom sheet on mobile
-    if (isMobile) {
-      setIsSidebarOpen(false);
-      setIsBottomSheetOpen(true);
-    }
   };
 
   // Close handlers
@@ -267,7 +246,6 @@ function App() {
     setSelectedFeature(null);
     setSelectedZoneId(null);
     setSelectedPropertyId(null);
-    setIsBottomSheetOpen(false);
   };
 
   const getSelectedData = () => {
@@ -309,7 +287,7 @@ function App() {
       />
 
       <div style={{ marginTop: 'auto', fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center', padding: '10px' }}>
-        Snow Command v2.1 (Mobile Ready)
+        Snow Command v2.2 (Driver Mode)
       </div>
     </>
   );
@@ -323,94 +301,135 @@ function App() {
     ]
   } : null;
 
+  // Mobile Driver Mode Layout
+  if (isMobile) {
+    return (
+      <div className="App" style={{ height: '100vh', width: '100vw', overflow: 'hidden' }}>
+        {/* Full-screen Map */}
+        <div style={{ 
+          position: 'fixed', 
+          inset: 0, 
+          paddingTop: '60px',  // Space for floating header
+          paddingBottom: '35vh' // Space for bottom sheet
+        }}>
+          {/* Radar Toggle - Top right */}
+          <button
+            onClick={() => setShowRadar(!showRadar)}
+            style={{
+              position: 'absolute',
+              top: '70px',
+              right: '16px',
+              width: '44px',
+              height: '44px',
+              borderRadius: '12px',
+              border: 'none',
+              backgroundColor: showRadar ? '#dbeafe' : 'white',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}
+            aria-label={showRadar ? 'Hide radar' : 'Show radar'}
+          >
+            <LayersIcon size={22} color={showRadar ? '#3b82f6' : '#64748b'} />
+          </button>
+          
+          <SnowMap
+            geoJsonData={combinedGeoData}
+            weatherData={weatherMap}
+            onSelectNeighborhood={handleSelect}
+            showRadar={showRadar}
+            mapRef={mapRef}
+            selectedZoneId={selectedZoneId}
+            selectedPropertyId={selectedPropertyId}
+            onSelectProperty={handlePropertySelect}
+            syntheticZones={syntheticZones}
+          />
+        </div>
+        
+        {/* Driver Mode UI Overlay */}
+        <MobileDriverMode
+          temperature={cityWeather?.current?.temperature ?? null}
+          snowAccumulation={maxSnow}
+          isSnowing={cityWeather?.current?.isSnowing || false}
+          lastUpdated={lastUpdated}
+          weatherData={weatherMap}
+          geoJsonData={geoData}
+          selectedPropertyId={selectedPropertyId}
+          onSelectProperty={handlePropertySelect}
+          onRefresh={() => refreshData(true)}
+          selectedZoneId={selectedZoneId}
+          onSelectZone={handleSelect}
+          selectedFeature={selectedFeature}
+        />
+      </div>
+    );
+  }
+
+  // Desktop Layout
   return (
     <div className="App" style={{ height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-      {/* Header - Hidden on Mobile for full-screen map */}
-      {!isMobile && <Header lastUpdated={lastUpdated} onRefresh={() => refreshData(true)} />}
+      {/* Header */}
+      <Header lastUpdated={lastUpdated} onRefresh={() => refreshData(true)} />
 
-      <div style={{ flex: 1, display: 'flex', height: isMobile ? '100vh' : 'calc(100vh - 60px)' }}>
+      <div style={{ flex: 1, display: 'flex', height: 'calc(100vh - 60px)' }}>
 
-        {/* Desktop Sidebar - Hidden on Mobile */}
-        {!isMobile && (
-          <div 
-            className="desktop-only sidebar-desktop"
+        {/* Desktop Sidebar */}
+        <div 
+          className="sidebar-desktop"
+          style={{
+            width: '35%',
+            minWidth: '400px',
+            backgroundColor: '#f8fafc',
+            borderRight: '1px solid #e2e8f0',
+            padding: '20px',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          <SidebarContent />
+        </div>
+
+        {/* Map Container */}
+        <div style={{ flex: 1, position: 'relative' }}>
+          {/* Radar Toggle Button */}
+          <button
             style={{
-              width: '35%',
-              minWidth: '400px',
-              backgroundColor: '#f8fafc',
-              borderRight: '1px solid #e2e8f0',
-              padding: '20px',
-              overflowY: 'auto',
+              position: 'absolute',
+              top: '16px',
+              right: '16px',
+              zIndex: 1000,
+              backgroundColor: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '10px 16px',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
               display: 'flex',
-              flexDirection: 'column'
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              transition: 'all 0.2s ease'
+            }}
+            onClick={() => setShowRadar(!showRadar)}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#f1f5f9';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'white';
+              e.currentTarget.style.transform = 'translateY(0)';
             }}
           >
-            <SidebarContent />
-          </div>
-        )}
-
-        {/* Map Container - Full screen on mobile */}
-        <div style={{ flex: 1, position: 'relative' }} className={isMobile ? 'mobile-map-container' : ''}>
-          
-          {/* Mobile Hamburger Menu Button */}
-          {isMobile && (
-            <button
-              className="mobile-menu-btn mobile-only"
-              onClick={() => setIsSidebarOpen(true)}
-              aria-label="Open menu"
-            >
-              <MenuIcon size={24} color="#1e293b" />
-            </button>
-          )}
-          
-          {/* Radar Toggle Button */}
-          {isMobile ? (
-            <button
-              className="mobile-radar-btn mobile-only"
-              onClick={() => setShowRadar(!showRadar)}
-              style={{ backgroundColor: showRadar ? '#dbeafe' : 'white' }}
-              aria-label={showRadar ? 'Hide radar' : 'Show radar'}
-            >
-              <LayersIcon size={22} color={showRadar ? '#3b82f6' : '#64748b'} />
-            </button>
-          ) : (
-            <div 
-              className="desktop-only"
-              style={{
-                position: 'absolute',
-                top: '20px',
-                left: '60px',
-                zIndex: 1000,
-                backgroundColor: 'white',
-                borderRadius: '8px',
-                border: '2px solid rgba(0,0,0,0.2)',
-                cursor: 'pointer',
-                padding: '8px 14px',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                transition: 'all 0.2s ease'
-              }}
-              onClick={() => setShowRadar(!showRadar)}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#f1f5f9';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'white';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-            >
-              <LayersIcon size={18} color={showRadar ? '#3b82f6' : '#64748b'} />
-              <span style={{ color: showRadar ? '#3b82f6' : '#1e293b' }}>
-                {showRadar ? 'Hide Radar' : 'Show Radar'}
-              </span>
-            </div>
-          )}
+            <LayersIcon size={18} color={showRadar ? '#3b82f6' : '#64748b'} />
+            <span style={{ color: showRadar ? '#3b82f6' : '#1e293b' }}>
+              {showRadar ? 'Hide Radar' : 'Show Radar'}
+            </span>
+          </button>
 
           <SnowMap
             geoJsonData={combinedGeoData}
@@ -424,51 +443,20 @@ function App() {
             syntheticZones={syntheticZones}
           />
 
-          {/* Forecast Bar - Hidden on mobile */}
-          {!isMobile && (
-            <div className="desktop-only" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1000 }}>
-              <GlobalForecastBar 
-                forecast={cityWeather?.forecast || null} 
-                realtime={realTimeProp as RealTimeObservation | null}
-                ecForecast={ecForecast}
-              />
-            </div>
-          )}
-          
-          {/* Mobile Last Updated Indicator */}
-          {isMobile && (
-            <div
-              className="mobile-only"
-              style={{
-                position: 'absolute',
-                bottom: 80,
-                right: 16,
-                backgroundColor: 'white',
-                borderRadius: '8px',
-                padding: '6px 12px',
-                fontSize: '0.75rem',
-                color: '#64748b',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                zIndex: 1000
-              }}
-              onClick={() => refreshData(true)}
-            >
-              🔄 {lastUpdated}
-            </div>
-          )}
+          {/* Forecast Bar - Desktop only */}
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1000 }}>
+            <GlobalForecastBar 
+              forecast={cityWeather?.forecast || null} 
+              realtime={realTimeProp as RealTimeObservation | null}
+              ecForecast={ecForecast}
+            />
+          </div>
         </div>
 
       </div>
 
-      {/* Mobile Drawer Sidebar */}
-      {isMobile && (
-        <MobileDrawer isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)}>
-          <SidebarContent />
-        </MobileDrawer>
-      )}
-
       {/* Desktop Detail Panel */}
-      {!isMobile && selectedFeature && (
+      {selectedFeature && (
         <NeighborhoodDetail
           name={selectedFeature.properties.name}
           data={getSelectedData()}
@@ -477,127 +465,8 @@ function App() {
           onClose={handleCloseDetail}
         />
       )}
-      
-      {/* Mobile Bottom Sheet */}
-      {isMobile && (
-        <MobileBottomSheet 
-          isOpen={isBottomSheetOpen} 
-          onClose={handleCloseDetail}
-          title={selectedFeature?.properties?.name || 'Zone Details'}
-        >
-          {selectedFeature ? (
-            <MobileZoneDetail 
-              name={selectedFeature.properties.name}
-              data={getSelectedData()}
-              isSynthetic={selectedFeature.properties?.isSynthetic}
-            />
-          ) : (
-            <div style={{ textAlign: 'center', color: '#64748b', padding: '20px' }}>
-              Tap a zone on the map to see details
-            </div>
-          )}
-        </MobileBottomSheet>
-      )}
     </div>
   );
 }
-
-// Simplified mobile zone detail component
-const MobileZoneDetail: React.FC<{
-  name: string;
-  data: WeatherData | undefined;
-  isSynthetic?: boolean;
-}> = ({ name, data, isSynthetic }) => {
-  const status = getZoneStatus(data);
-  
-  return (
-    <div>
-      {/* Status Badge */}
-      <div style={{
-        display: 'inline-block',
-        backgroundColor: status.color,
-        color: 'white',
-        padding: '8px 16px',
-        borderRadius: '8px',
-        fontWeight: 700,
-        fontSize: '0.9rem',
-        marginBottom: '16px'
-      }}>
-        {status.label} {isSynthetic && '(Bubble Zone)'}
-      </div>
-      
-      {/* Snow Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-        <div style={{ 
-          backgroundColor: '#f8fafc', 
-          padding: '16px', 
-          borderRadius: '12px',
-          textAlign: 'center' 
-        }}>
-          <div style={{ fontSize: '2rem', fontWeight: 800, color: status.color }}>
-            {status.snow24h.toFixed(1)}
-          </div>
-          <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
-            cm next 24h
-          </div>
-        </div>
-        <div style={{ 
-          backgroundColor: '#f8fafc', 
-          padding: '16px', 
-          borderRadius: '12px',
-          textAlign: 'center' 
-        }}>
-          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#3b82f6' }}>
-            {status.pastSnow24h.toFixed(1)}
-          </div>
-          <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
-            cm past 24h
-          </div>
-        </div>
-      </div>
-      
-      {/* Temperature & Wind */}
-      {data && (
-        <div style={{ 
-          display: 'flex', 
-          gap: '24px', 
-          justifyContent: 'center',
-          padding: '16px',
-          backgroundColor: '#f1f5f9',
-          borderRadius: '12px'
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>
-              {data.temperature?.toFixed(0) || '--'}°C
-            </div>
-            <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Temperature</div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>
-              {data.windGusts?.toFixed(0) || '--'} km/h
-            </div>
-            <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Wind Gusts</div>
-          </div>
-        </div>
-      )}
-      
-      {/* Action needed indicator */}
-      {status.needsAction && (
-        <div style={{
-          marginTop: '16px',
-          padding: '12px 16px',
-          backgroundColor: status.level === 3 ? '#fef2f2' : '#fffbeb',
-          borderRadius: '12px',
-          borderLeft: `4px solid ${status.color}`,
-          fontSize: '0.85rem',
-          fontWeight: 600,
-          color: status.level === 3 ? '#b91c1c' : '#92400e'
-        }}>
-          ⚠️ {status.level === 3 ? 'Commercial clearing required' : 'Residential clearing required'}
-        </div>
-      )}
-    </div>
-  );
-};
 
 export default App;
