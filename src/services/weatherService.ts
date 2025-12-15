@@ -12,8 +12,8 @@ const BASE_URL = 'https://api.open-meteo.com/v1/forecast';
 const USE_MOCK_DATA = false; // Toggle this when API limits reset
 
 // ============= CACHE SYSTEM =============
-// Cache weather data for 30 minutes to reduce API calls significantly
-const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes (increased from 10)
+// Cache weather data for 15 minutes to reduce API calls significantly
+const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes (balanced for Western Sector batch fetching)
 
 interface CacheEntry<T> {
     data: T;

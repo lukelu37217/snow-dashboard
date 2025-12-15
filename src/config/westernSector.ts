@@ -98,6 +98,10 @@ export const WESTERN_SECTOR_ZONES: string[] = [
     'Headingley South',
     'Headingley North',
     'Deer Lodge',
+    'Deer Pointe',           // Custom zone for Deer Pointe Dr clients
+    'Breezy Bend',           // Custom zone for Breezy Bend Country Club area
+    'South Headingley',      // Custom zone for Seekings St / Dodds Rd area
+    'Ridgewood South Extension', // Custom zone extending Ridgewood South
     
     // === ST. JAMES / AIRPORT ===
     'St. James Industrial',
