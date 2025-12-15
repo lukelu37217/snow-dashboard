@@ -1,0 +1,578 @@
+[
+  {
+    "id": "prop-001",
+    "address": "110 Ridgedale Cres",
+    "zone": "Ridgedale",
+    "lat": 49.8670391,
+    "lng": -97.2764279,
+    "type": "residential",
+    "formattedAddress": "110, Ridgedale Crescent, Ridgedale, Charleswood - Tuxedo - Westwood, Winnipeg, Manitoba, R3K 1Z3, Canada"
+  },
+  {
+    "id": "prop-002",
+    "address": "14 Southdown Lane",
+    "zone": "GEOCODE_FAILED",
+    "lat": 0,
+    "lng": 0,
+    "type": "residential",
+    "formattedAddress": null
+  },
+  {
+    "id": "prop-003",
+    "address": "181 Ridgedale Cres",
+    "zone": "Ridgedale",
+    "lat": 49.8680235,
+    "lng": -97.2746509,
+    "type": "residential",
+    "formattedAddress": "181, Ridgedale Crescent, Ridgedale, Charleswood - Tuxedo - Westwood, Winnipeg, Manitoba, R3K 1Z3, Canada"
+  },
+  {
+    "id": "prop-004",
+    "address": "183 Seekings St",
+    "zone": "GEOCODE_FAILED",
+    "lat": 0,
+    "lng": 0,
+    "type": "residential",
+    "formattedAddress": null
+  },
+  {
+    "id": "prop-005",
+    "address": "369 Wescana St",
+    "zone": "GEOCODE_FAILED",
+    "lat": 0,
+    "lng": 0,
+    "type": "residential",
+    "formattedAddress": null
+  },
+  {
+    "id": "prop-006",
+    "address": "424 Hosmer Blvd",
+    "zone": "Tuxedo",
+    "lat": 49.862262,
+    "lng": -97.2225199,
+    "type": "residential",
+    "formattedAddress": "424, Hosmer Boulevard, Tuxedo, Assiniboine Park, Charleswood - Tuxedo - Westwood, Winnipeg, Manitoba, R3P 0N3, Canada"
+  },
+  {
+    "id": "prop-007",
+    "address": "4515 Roblin Blvd",
+    "zone": "Ridgedale",
+    "lat": 49.8629501,
+    "lng": -97.2769268,
+    "type": "commercial",
+    "formattedAddress": "4515, Roblin Boulevard, Ridgedale, Charleswood - Tuxedo - Westwood, Winnipeg, Manitoba, R3R 0E3, Canada"
+  },
+  {
+    "id": "prop-008",
+    "address": "52 Southwick Close",
+    "zone": "Elmhurst",
+    "lat": 49.8553466,
+    "lng": -97.2521968,
+    "type": "residential",
+    "formattedAddress": "52, Southwick Close, Elmhurst, Charleswood - Tuxedo - Westwood, Winnipeg, Manitoba, R3R 0C2, Canada"
+  },
+  {
+    "id": "prop-009",
+    "address": "53 Litchfield Blvd",
+    "zone": "South Tuxedo",
+    "lat": 49.8491993,
+    "lng": -97.2289196,
+    "type": "residential",
+    "formattedAddress": "53, Litchfield Boulevard, Charleswood–Tuxedo, Charleswood - Tuxedo - Westwood, Winnipeg, Manitoba, R3P 2J1, Canada"
+  },
+  {
+    "id": "prop-010",
+    "address": "7830 Roblin Blvd",
+    "zone": "Roblin Park",
+    "lat": 49.8582705,
+    "lng": -97.2865696,
+    "type": "residential",
+    "formattedAddress": "Roblin Boulevard, Roblin Park, Charleswood - Tuxedo - Westwood, Winnipeg, Manitoba, R3R 0G9, Canada"
+  },
+  {
+    "id": "prop-011",
+    "address": "8565 Roblin Blvd",
+    "zone": "Roblin Park",
+    "lat": 49.8582705,
+    "lng": -97.2865696,
+    "type": "residential",
+    "formattedAddress": "Roblin Boulevard, Roblin Park, Charleswood - Tuxedo - Westwood, Winnipeg, Manitoba, R3R 0G9, Canada"
+  },
+  {
+    "id": "prop-012",
+    "address": "220 Ridgedale Cres",
+    "zone": "Ridgedale",
+    "lat": 49.8667201,
+    "lng": -97.2756636,
+    "type": "residential",
+    "formattedAddress": "220, Ridgedale Crescent, Ridgedale, Charleswood - Tuxedo - Westwood, Winnipeg, Manitoba, R3K 1Z3, Canada"
+  },
+  {
+    "id": "prop-013",
+    "address": "466 Ainslie Street",
+    "zone": "Silver Heights",
+    "lat": 49.8790304,
+    "lng": -97.2612233,
+    "type": "residential",
+    "formattedAddress": "Ainslie Street, Silver Heights, St. James, Winnipeg, Manitoba, R3J 0V8, Canada"
+  },
+  {
+    "id": "prop-014",
+    "address": "106 Wescana Street",
+    "zone": "GEOCODE_FAILED",
+    "lat": 0,
+    "lng": 0,
+    "type": "residential",
+    "formattedAddress": null
+  },
+  {
+    "id": "prop-015",
+    "address": "487 King Edward St",
+    "zone": "King Edward",
+    "lat": 49.8897788,
+    "lng": -97.2079349,
+    "type": "commercial",
+    "formattedAddress": "487, King Edward Street, King Edward, St. James, Winnipeg, Manitoba, R3J 0Y2, Canada"
+  },
+  {
+    "id": "prop-016",
+    "address": "57 Curry Dr",
+    "zone": "GEOCODE_FAILED",
+    "lat": 0,
+    "lng": 0,
+    "type": "residential",
+    "formattedAddress": null
+  },
+  {
+    "id": "prop-017",
+    "address": "75 Charlesglen Drive",
+    "zone": "GEOCODE_FAILED",
+    "lat": 0,
+    "lng": 0,
+    "type": "residential",
+    "formattedAddress": null
+  },
+  {
+    "id": "prop-018",
+    "address": "60 Eagle Drive",
+    "zone": "Oak Point Highway",
+    "lat": 49.9338634,
+    "lng": -97.2226461,
+    "type": "residential",
+    "formattedAddress": "60, Eagle Drive, Point Douglas, Winnipeg, Manitoba, R2R 0T8, Canada"
+  },
+  {
+    "id": "prop-019",
+    "address": "2 Augusta Drive",
+    "zone": "Waverley Heights",
+    "lat": 49.8075776,
+    "lng": -97.1674446,
+    "type": "residential",
+    "formattedAddress": "Augusta Drive, Waverley Heights, Waverley West, Winnipeg, Manitoba, R2T 4C4, Canada"
+  },
+  {
+    "id": "prop-020",
+    "address": "355 Dodds Road",
+    "zone": "GEOCODE_FAILED",
+    "lat": 0,
+    "lng": 0,
+    "type": "residential",
+    "formattedAddress": null
+  },
+  {
+    "id": "prop-021",
+    "address": "1096 Green Oaks Lane",
+    "zone": "GEOCODE_FAILED",
+    "lat": 0,
+    "lng": 0,
+    "type": "residential",
+    "formattedAddress": null
+  },
+  {
+    "id": "prop-022",
+    "address": "278 Deer Pointe Drive",
+    "zone": "GEOCODE_FAILED",
+    "lat": 0,
+    "lng": 0,
+    "type": "residential",
+    "formattedAddress": null
+  },
+  {
+    "id": "prop-023",
+    "address": "330 Risbey Crescent",
+    "zone": "Buchanan",
+    "lat": 49.8978525,
+    "lng": -97.3197972,
+    "type": "residential",
+    "formattedAddress": "330, Risbey Crescent, Buchanan, St. James, Winnipeg, Manitoba, R2Y 1X5, Canada"
+  },
+  {
+    "id": "prop-024",
+    "address": "48 Deer Pointe Drive",
+    "zone": "GEOCODE_FAILED",
+    "lat": 0,
+    "lng": 0,
+    "type": "residential",
+    "formattedAddress": null
+  },
+  {
+    "id": "prop-025",
+    "address": "22 Matlock Crescent",
+    "zone": "Betsworth",
+    "lat": 49.8541804,
+    "lng": -97.2952319,
+    "type": "residential",
+    "formattedAddress": "22, Matlock Crescent, Betsworth, Charleswood - Tuxedo - Westwood, Winnipeg, Manitoba, R3R 0G9, Canada"
+  },
+  {
+    "id": "prop-026",
+    "address": "1 Kerslake Drive",
+    "zone": "South Tuxedo",
+    "lat": 49.8502241,
+    "lng": -97.228418,
+    "type": "residential",
+    "formattedAddress": "1, Kerslake Drive, Charleswood–Tuxedo, Charleswood - Tuxedo - Westwood, Winnipeg, Manitoba, R3P 2J1, Canada"
+  },
+  {
+    "id": "prop-027",
+    "address": "109 Carberry Cres",
+    "zone": "Crestview",
+    "lat": 49.8991939,
+    "lng": -97.2972486,
+    "type": "residential",
+    "formattedAddress": "109, Carberry Crescent, St. Charles, Crestview, St. James, Winnipeg, Manitoba, R2Y 0H7, Canada"
+  },
+  {
+    "id": "prop-028",
+    "address": "175 Ridgedale Cres",
+    "zone": "Ridgedale",
+    "lat": 49.8685036,
+    "lng": -97.2744765,
+    "type": "residential",
+    "formattedAddress": "175, Ridgedale Crescent, Ridgedale, Charleswood - Tuxedo - Westwood, Winnipeg, Manitoba, R3K 1Z3, Canada"
+  },
+  {
+    "id": "prop-029",
+    "address": "26 Orchard Park Boulevard",
+    "zone": "Southboine",
+    "lat": 49.8633669,
+    "lng": -97.3050936,
+    "type": "residential",
+    "formattedAddress": "26, Orchard Park Boulevard, Southboine, Charleswood - Tuxedo - Westwood, Winnipeg, Manitoba, R3K 0L8, Canada"
+  },
+  {
+    "id": "prop-030",
+    "address": "300 Sharp Blvd",
+    "zone": "Airport",
+    "lat": 49.8905736,
+    "lng": -97.2348989,
+    "type": "residential",
+    "formattedAddress": "Sharp Boulevard, St. James–Brooklands–Weston, Airport, St. James, Winnipeg, Manitoba, R3J 2J3, Canada"
+  },
+  {
+    "id": "prop-031",
+    "address": "308 Deer Point Drive",
+    "zone": "GEOCODE_FAILED",
+    "lat": 0,
+    "lng": 0,
+    "type": "residential",
+    "formattedAddress": null
+  },
+  {
+    "id": "prop-032",
+    "address": "31 Hermitage Road",
+    "zone": "GEOCODE_FAILED",
+    "lat": 0,
+    "lng": 0,
+    "type": "residential",
+    "formattedAddress": null
+  },
+  {
+    "id": "prop-033",
+    "address": "5 Livingston Way",
+    "zone": "GEOCODE_FAILED",
+    "lat": 0,
+    "lng": 0,
+    "type": "residential",
+    "formattedAddress": null
+  },
+  {
+    "id": "prop-034",
+    "address": "6 Hermitage Road",
+    "zone": "GEOCODE_FAILED",
+    "lat": 0,
+    "lng": 0,
+    "type": "residential",
+    "formattedAddress": null
+  },
+  {
+    "id": "prop-035",
+    "address": "70 Ascot Bay",
+    "zone": "Elmhurst",
+    "lat": 49.8546016,
+    "lng": -97.2616439,
+    "type": "residential",
+    "formattedAddress": "70, Ascot Bay, Charleswood, Elmhurst, Charleswood - Tuxedo - Westwood, Winnipeg, Manitoba, R3R 3S5, Canada"
+  },
+  {
+    "id": "prop-036",
+    "address": "710 Park Boulevard S",
+    "zone": "South Tuxedo",
+    "lat": 49.8506978,
+    "lng": -97.2222142,
+    "type": "residential",
+    "formattedAddress": "710, Park Boulevard South, Charleswood–Tuxedo, Charleswood - Tuxedo - Westwood, Winnipeg, Manitoba, R3P 1H1, Canada"
+  },
+  {
+    "id": "prop-037",
+    "address": "95 Charlesglen Drive",
+    "zone": "GEOCODE_FAILED",
+    "lat": 0,
+    "lng": 0,
+    "type": "residential",
+    "formattedAddress": null
+  },
+  {
+    "id": "prop-038",
+    "address": "29 Kemper",
+    "zone": "GEOCODE_FAILED",
+    "lat": 0,
+    "lng": 0,
+    "type": "residential",
+    "formattedAddress": null
+  },
+  {
+    "id": "prop-039",
+    "address": "3 Glenacres Crescent",
+    "zone": "Richmond West",
+    "lat": 49.7794109,
+    "lng": -97.1724376,
+    "type": "residential",
+    "formattedAddress": "3, Glenacres Crescent, Richmond West, Waverley West, Winnipeg, Manitoba, R3T 5R3, Canada"
+  },
+  {
+    "id": "prop-040",
+    "address": "201 Dromore Avenue",
+    "zone": "Crescentwood",
+    "lat": 49.8728751,
+    "lng": -97.1698746,
+    "type": "residential",
+    "formattedAddress": "201, Dromore Avenue, Crescentwood, River Heights - Fort Garry, Winnipeg, Manitoba, R3M 0J9, Canada"
+  },
+  {
+    "id": "prop-041",
+    "address": "516 Rodney St",
+    "zone": "GEOCODE_FAILED",
+    "lat": 0,
+    "lng": 0,
+    "type": "residential",
+    "formattedAddress": null
+  },
+  {
+    "id": "prop-042",
+    "address": "300 Stafford Street",
+    "zone": "Earl Grey",
+    "lat": 49.8654034,
+    "lng": -97.1590089,
+    "type": "residential",
+    "formattedAddress": "Stafford Dental Group, 300, Stafford Street, Grant Park, Earl Grey, Fort Rouge–East Fort Garry, River Heights - Fort Garry, Winnipeg, Manitoba, R3M 2W6, Canada"
+  },
+  {
+    "id": "prop-043",
+    "address": "1695 Ellice Avenue",
+    "zone": "St. James Industrial",
+    "lat": 49.8949327,
+    "lng": -97.2019638,
+    "type": "commercial",
+    "formattedAddress": "1695, Ellice Avenue, St. James Industrial, St. James, Winnipeg, Manitoba, R3G 0G4, Canada"
+  },
+  {
+    "id": "prop-044",
+    "address": "1255 Leila Ave",
+    "zone": "Leila North",
+    "lat": 49.9580072,
+    "lng": -97.1591592,
+    "type": "commercial",
+    "formattedAddress": "1255, Leila Avenue, Leila North, Old Kildonan, Winnipeg, Manitoba, R2P 2Y2, Canada"
+  },
+  {
+    "id": "prop-045",
+    "address": "1265 Leila Ave",
+    "zone": "Leila North",
+    "lat": 49.958778,
+    "lng": -97.1595873,
+    "type": "commercial",
+    "formattedAddress": "1265, Leila Avenue, Leila North, Old Kildonan, Winnipeg, Manitoba, R2P 2Y2, Canada"
+  },
+  {
+    "id": "prop-046",
+    "address": "1275 Leila Ave",
+    "zone": "Leila North",
+    "lat": 49.9583362,
+    "lng": -97.1603737,
+    "type": "commercial",
+    "formattedAddress": "1275, Leila Avenue, Leila North, Old Kildonan, Winnipeg, Manitoba, R2P 2Y2, Canada"
+  },
+  {
+    "id": "prop-047",
+    "address": "1835 Sargent Avenue",
+    "zone": "St. James Industrial",
+    "lat": 49.8989948,
+    "lng": -97.2125738,
+    "type": "commercial",
+    "formattedAddress": "1835, Sargent Avenue, St. James Industrial, St. James, Winnipeg, Manitoba, R3H 0E2, Canada"
+  },
+  {
+    "id": "prop-048",
+    "address": "700 Kenaston Blvd",
+    "zone": "Mathers",
+    "lat": 49.852227,
+    "lng": -97.2066413,
+    "type": "commercial",
+    "formattedAddress": "700, Kenaston Boulevard, Mathers, River Heights - Fort Garry, Winnipeg, Manitoba, R3N 2A1, Canada"
+  },
+  {
+    "id": "prop-049",
+    "address": "750 Kenaston Blvd",
+    "zone": "Mathers",
+    "lat": 49.8518044,
+    "lng": -97.2063371,
+    "type": "commercial",
+    "formattedAddress": "750, Kenaston Boulevard, Mathers, River Heights - Fort Garry, Winnipeg, Manitoba, R3N 2A1, Canada"
+  },
+  {
+    "id": "prop-050",
+    "address": "5392 Portage Avenue",
+    "zone": "St. Matthews",
+    "lat": 49.8875119,
+    "lng": -97.1626472,
+    "type": "commercial",
+    "formattedAddress": "Portage Avenue, St. Matthews, West End, Daniel McIntyre, Winnipeg, Manitoba, R3E 1W1, Canada"
+  },
+  {
+    "id": "prop-051",
+    "address": "180 Cree Crescent",
+    "zone": "Murray Industrial Park",
+    "lat": 49.8921469,
+    "lng": -97.267734,
+    "type": "commercial",
+    "formattedAddress": "180, Cree Crescent, Murray Industrial Park, St. James, Winnipeg, Manitoba, R3J 3M6, Canada"
+  },
+  {
+    "id": "prop-052",
+    "address": "3074 Portage Ave",
+    "zone": "Kirkfield",
+    "lat": 49.8799333,
+    "lng": -97.283433,
+    "type": "commercial",
+    "formattedAddress": "Lutheran Church–Canada, 3074, Portage Avenue, Kirkfield, Charleswood - Tuxedo - Westwood, Winnipeg, Manitoba, R3K 0W4, Canada"
+  },
+  {
+    "id": "prop-053",
+    "address": "3420 Grant Ave",
+    "zone": "Elmhurst",
+    "lat": 49.8583771,
+    "lng": -97.2587765,
+    "type": "commercial",
+    "formattedAddress": "3420, Grant Avenue, Charleswood, Elmhurst, Charleswood - Tuxedo - Westwood, Winnipeg, Manitoba, R3R 0C2, Canada"
+  },
+  {
+    "id": "prop-054",
+    "address": "1438 Church Ave",
+    "zone": "Inkster Industrial Park",
+    "lat": 49.9377968,
+    "lng": -97.1765649,
+    "type": "commercial",
+    "formattedAddress": "1438, Church Avenue, Inkster Industrial Park, Point Douglas, Winnipeg, Manitoba, R2X 2Y9, Canada"
+  },
+  {
+    "id": "prop-055",
+    "address": "2070 Logan Ave",
+    "zone": "Omand's Creek Industrial",
+    "lat": 49.9247506,
+    "lng": -97.2108658,
+    "type": "commercial",
+    "formattedAddress": "2070, Logan Avenue, Point Douglas, Winnipeg, Manitoba, R3H 0J9, Canada"
+  },
+  {
+    "id": "prop-056",
+    "address": "2078 Logan Ave",
+    "zone": "Omand's Creek Industrial",
+    "lat": 49.9251121,
+    "lng": -97.2133617,
+    "type": "commercial",
+    "formattedAddress": "2078, Logan Avenue, Point Douglas, Winnipeg, Manitoba, R3H 0J9, Canada"
+  },
+  {
+    "id": "prop-057",
+    "address": "2150 Logan Ave",
+    "zone": "Omand's Creek Industrial",
+    "lat": 49.9247739,
+    "lng": -97.216095,
+    "type": "commercial",
+    "formattedAddress": "2150, Logan Avenue, Point Douglas, Winnipeg, Manitoba, R3H 0J9, Canada"
+  },
+  {
+    "id": "prop-058",
+    "address": "1369 Border St",
+    "zone": "St. James Industrial",
+    "lat": 49.9145203,
+    "lng": -97.2009778,
+    "type": "commercial",
+    "formattedAddress": "1369, Border Street, Brooklands, St. James Industrial, St. James, Winnipeg, Manitoba, R3H 1A8, Canada"
+  },
+  {
+    "id": "prop-059",
+    "address": "830 King Edward St",
+    "zone": "St. James Industrial",
+    "lat": 49.902802,
+    "lng": -97.2073816,
+    "type": "commercial",
+    "formattedAddress": "Torque Brewing, 830, King Edward Street, St. James Industrial, St. James, Winnipeg, Manitoba, R3H 0G1, Canada"
+  },
+  {
+    "id": "prop-060",
+    "address": "1535 Burrows Ave",
+    "zone": "Inkster Industrial Park",
+    "lat": 49.9322311,
+    "lng": -97.1840993,
+    "type": "commercial",
+    "formattedAddress": "1535, Burrows Avenue, Shaughnessy Park, Inkster Industrial Park, Point Douglas, Winnipeg, Manitoba, R2X 0T4, Canada"
+  },
+  {
+    "id": "prop-061",
+    "address": "6945 Roblin Blvd",
+    "zone": "Roblin Park",
+    "lat": 49.8582705,
+    "lng": -97.2865696,
+    "type": "commercial",
+    "formattedAddress": "Roblin Boulevard, Roblin Park, Charleswood - Tuxedo - Westwood, Winnipeg, Manitoba, R3R 0G9, Canada"
+  },
+  {
+    "id": "prop-062",
+    "address": "3740 Portage Ave",
+    "zone": "Glendale",
+    "lat": 49.8810938,
+    "lng": -97.3177198,
+    "type": "commercial",
+    "formattedAddress": "3740, Portage Avenue, Glendale, Charleswood - Tuxedo - Westwood, Winnipeg, Manitoba, R3K 0Z8, Canada"
+  },
+  {
+    "id": "prop-063",
+    "address": "2800 Saskatchewan Ave",
+    "zone": "Saskatchewan North",
+    "lat": 49.9029353,
+    "lng": -97.2686033,
+    "type": "commercial",
+    "formattedAddress": "2800, Saskatchewan Avenue, Saskatchewan North, St. James, Winnipeg, Manitoba, R3J 3M6, Canada"
+  },
+  {
+    "id": "prop-064",
+    "address": "95 Scurfield Blvd",
+    "zone": "West Fort Garry Industrial",
+    "lat": 49.8180314,
+    "lng": -97.1912621,
+    "type": "commercial",
+    "formattedAddress": "TRP Academy, 95, Scurfield Boulevard, West Fort Garry Industrial, Winnipeg, Manitoba, R3Y 1Y1, Canada"
+  }
+]

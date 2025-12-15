@@ -66,79 +66,71 @@
 /**
  * Whitelist of neighborhood names to render
  * These match the 'name' property in winnipeg-neighbourhoods.geojson
+ * 
+ * Updated: December 15, 2025 - Synced with clientProperties.ts zones
  */
 export const SERVICE_ZONE_WHITELIST: string[] = [
+    // === HEADINGLEY (RM - Outside Winnipeg) ===
+    'Headingley South', // Taylor Farm, Charlesglen, Wescana, Roblin Blvd west
+    'Headingley North', // Deer Pointe, Seekings, Portage Ave west
+    
     // === CHARLESWOOD CLUSTER ===
-    'Charleswood',      // No exact match in GeoJSON - covers general area
-    'Ridgedale',        // Ridgedale Cres addresses
-    'Ridgewood South',  // Southdown, Southwick, Ridgedale Cres, Wescana
-    'Varsity View',     // Seekings St, 4515 Roblin
-    'Westdale',         // Wescana St, Carberry, Ascot
-    'Eric Coy',         // Hosmer Blvd, Dodds, Green Oaks, Matlock, Hermitage
-    'Assiniboine Park', // Part of Roblin Blvd
-    'Marlton',          // Near Charleswood - Hosmer, Southwick, Litchfield, Kerslake
-    'Linden Woods',     // Green Oaks, Deer Pointe, Risbey
+    'Ridgedale',        // Ridgedale Cres addresses, 4515 Roblin
+    'Betsworth',        // 22 Matlock Crescent
+    'Southboine',       // 26 Orchard Park Boulevard
+    'Elmhurst',         // 52 Southwick, 70 Ascot Bay, 3420 Grant
+    'Roblin Park',      // Near Roblin Blvd inside Winnipeg
     
-    // === HEADINGLEY / WEST ===
-    'Headingley South', // 7830, 8565, 6945 Roblin Blvd, 5392 Portage
-    'Headingley North', // 183 Seekings St
-    'Deer Lodge',       // 300 Sharp Blvd, 2 Augusta Drive
-    
-    // === NEW ZONES FROM CLIENT LIST ===
-    'Bruce Park',       // 466 Ainslie Street
-    'South Tuxedo',     // Charlesglen Drive, Curry Dr, Eagle Drive
-    'Pointe West',      // Deer Pointe Drive addresses
-    'Shaughnessy Park', // 1535 Burrows Ave
-    'Inkster',          // 1438 Church Ave
-    'Linden Ridge',     // Adjacent to Linden Woods
-    
-    // === ST. JAMES / AIRPORT CLUSTER ===
-    'St. James Industrial', // Commercial area
-    'King Edward',          // King Edward St
-    'Airport',              // Airport area
-    'Polo Park',            // Polo Park, Ellice
-    'Sturgeon Creek',       // Sturgeon Creek area
-    'Silver Heights',       // Silver Heights
-    'Westwood',             // Portage Ave commercial
-    'Crestview',            // Cree Crescent area
-    
-    // === TUXEDO / CENTRAL CLUSTER ===
-    'Tuxedo',           // Kenaston area
+    // === TUXEDO AREA ===
+    'Tuxedo',           // 424 Hosmer, 31 Hermitage, 6 Hermitage, 60 Eagle
+    'South Tuxedo',     // 53 Litchfield, 1 Kerslake, 710 Park Blvd S
+    'Mathers',          // 700-750 Kenaston Blvd
     'Old Tuxedo',       // Historic Tuxedo
-    'River Heights',    // River Heights area - use specific ones below
-    'Central River Heights',  // Central River Heights
-    'South River Heights',    // South River Heights
-    'North River Heights',    // North River Heights
-    'Crescentwood',     // Dromore Avenue
-    'Wellington Crescent',    // Adjacent to River Heights
-    'Grant Park',       // Grant Ave area
     
-    // === NORTH/WEST COMMERCIAL CLUSTER ===
-    'Garden City',              // Leila area
-    'Leila-McPhillips Triangle', // Leila addresses (1255, 1265, 1275)
-    'Leila North',              // North Leila
-    'Inkster Gardens',          // Inkster area
-    'Inkster-Faraday',          // Inkster area
-    'Weston',                   // Border St, Saskatchewan area
-    'Brooklands',               // Adjacent to Weston
-    'Sargent Park',             // Sargent Avenue
-    'West Broadway',            // Near Sargent
-    'Burrows Central',          // Burrows Ave
-    'Logan-C.P.R.',             // Logan Ave
+    // === RIVER HEIGHTS / CRESCENTWOOD ===
+    'Crescentwood',     // 201 Dromore, 516 Rodney St
+    'Earl Grey',        // 300 Stafford Street
+    'Wellington Crescent',
+    'River Heights',
     
-    // === PERIMETER / SOUTH CLUSTER ===
-    'Whyte Ridge',      // Whyte Ridge, Scurfield
-    'South Pointe',     // Near Whyte Ridge
-    'Waverley Heights', // Waverley area
-    'Richmond West',    // Fort Richmond adjacent
+    // === FORT GARRY ===
+    'Wildwood',         // 5 Livingston Way
+    'Waverley Heights', // 2 Augusta Drive
+    'Richmond West',    // 3 Glenacres Crescent
+    'West Fort Garry Industrial', // 95 Scurfield Blvd
+    'Whyte Ridge',
     
-    // === ADDITIONAL COVERAGE ===
-    'Wolseley',         // Rodney St area
-    'Portage-Ellice',   // Central Portage commercial
-    'Mathers',          // Adjacent to River Heights
-    'Roslyn',           // River Heights area
-    'Wildwood',         // Near Charleswood
-    'Roblin Park',      // Roblin Blvd area
+    // === ST. JAMES-ASSINIBOIA ===
+    'Crestview',        // 109 Carberry Cres
+    'Silver Heights',   // 466 Ainslie Street
+    'Westwood',         // 29 Kemper
+    'Kirkfield',        // 3074 Portage Ave
+    'Glendale',         // 3740 Portage Ave
+    'Buchanan',         // 330 Risbey Crescent
+    'Airport',          // 300 Sharp Blvd
+    
+    // === COMMERCIAL / INDUSTRIAL ===
+    'King Edward',              // 487 King Edward St
+    'St. James Industrial',     // 830 King Edward, 1695 Ellice, 1835 Sargent, 1369 Border
+    'Murray Industrial Park',   // 180 Cree Crescent
+    'Saskatchewan North',       // 2800 Saskatchewan Ave
+    "Omand's Creek Industrial", // 2070, 2078, 2150 Logan Ave
+    'Inkster Industrial Park',  // 1438 Church, 1535 Burrows
+    'Leila North',              // 1255, 1265, 1275 Leila Ave
+    
+    // === ADDITIONAL COVERAGE (neighboring zones) ===
+    'Assiniboia Downs',  // 355 Dodds Road, 5392 Portage Ave
+    'Tuxedo Industrial', // 5 Livingston Way
+    'Birchwood',         // 29 Kemper
+    'Sturgeon Creek',
+    'Deer Lodge',
+    'Bruce Park',
+    'Varsity View',
+    'Polo Park',
+    'Grant Park',
+    'Garden City',
+    'Brooklands',
+    'Weston',
 ];
 
 /**
