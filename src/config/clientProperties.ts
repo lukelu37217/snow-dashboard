@@ -51,11 +51,12 @@ export const CLIENT_PROPERTIES: ClientProperty[] = [
     // === VARSITY VIEW ===
     { id: 'prop-022', address: '4515 Roblin Blvd', zone: 'Varsity View', lat: 49.8650, lng: -97.2520, type: 'residential' },
     
-    // === HEADINGLEY SOUTH ===
-    { id: 'prop-023', address: '7830 Roblin Blvd', zone: 'Headingley South', lat: 49.8720, lng: -97.3850, type: 'residential' },
-    { id: 'prop-024', address: '8565 Roblin Blvd', zone: 'Headingley South', lat: 49.8735, lng: -97.4020, type: 'residential' },
-    { id: 'prop-025', address: '6945 Roblin Blvd', zone: 'Headingley South', lat: 49.8695, lng: -97.3580, type: 'residential' },
-    { id: 'prop-026', address: '5392 Portage Avenue', zone: 'Headingley South', lat: 49.8780, lng: -97.3200, type: 'commercial' },
+    // === HEADINGLEY SOUTH (RM of Headingley - South of Assiniboine River) ===
+    // Covers: Roblin Blvd, Ridgedale area, Breezy Bend - all west of Perimeter
+    { id: 'prop-023', address: '7830 Roblin Blvd', zone: 'Headingley South', lat: 49.8680, lng: -97.3850, type: 'residential' },
+    { id: 'prop-024', address: '8565 Roblin Blvd', zone: 'Headingley South', lat: 49.8690, lng: -97.4020, type: 'residential' },
+    { id: 'prop-025', address: '6945 Roblin Blvd', zone: 'Headingley South', lat: 49.8660, lng: -97.3580, type: 'residential' },
+    { id: 'prop-026', address: '5392 Portage Avenue', zone: 'Headingley South', lat: 49.8720, lng: -97.3200, type: 'commercial' },
     
     // === DEER LODGE ===
     { id: 'prop-027', address: '300 Sharp Blvd', zone: 'Deer Lodge', lat: 49.8880, lng: -97.2380, type: 'residential' },
@@ -88,12 +89,15 @@ export const CLIENT_PROPERTIES: ClientProperty[] = [
     
     // === SOUTH ===
     { id: 'prop-050', address: '95 Scurfield Blvd', zone: 'Whyte Ridge', lat: 49.8120, lng: -97.2350, type: 'residential' },
-    { id: 'prop-051', address: '278 Deer Pointe Drive', zone: 'Pointe West', lat: 49.8085, lng: -97.2280, type: 'residential' },
-    { id: 'prop-052', address: '48 Deer Pointe Drive', zone: 'Pointe West', lat: 49.8075, lng: -97.2265, type: 'residential' },
-    { id: 'prop-053', address: '308 Deer Point Drive', zone: 'Pointe West', lat: 49.8090, lng: -97.2295, type: 'residential' },
-    { id: 'prop-054', address: '330 Risbey Crescent', zone: 'Crestview', lat: 49.8920, lng: -97.2520, type: 'residential' },
-    { id: 'prop-055', address: '183 Seekings St', zone: 'Headingley North', lat: 49.8850, lng: -97.3450, type: 'residential' },
-    { id: 'prop-056', address: '29 Kemper', zone: 'Westwood', lat: 49.8780, lng: -97.2680, type: 'residential' },
+    { id: 'prop-051', address: '308 Deer Point Drive', zone: 'Pointe West', lat: 49.8090, lng: -97.2295, type: 'residential' },
+    { id: 'prop-052', address: '330 Risbey Crescent', zone: 'Crestview', lat: 49.8920, lng: -97.2520, type: 'residential' },
+    { id: 'prop-053', address: '183 Seekings St', zone: 'Headingley North', lat: 49.8880, lng: -97.3450, type: 'residential' },
+    { id: 'prop-054', address: '29 Kemper', zone: 'Westwood', lat: 49.8780, lng: -97.2680, type: 'residential' },
+    
+    // === HEADINGLEY AREA (West of Perimeter - Roblin Blvd Corridor) ===
+    // These fall within the new Headingley South administrative boundary
+    { id: 'prop-055', address: '278 Deer Pointe Drive', zone: 'Headingley South', lat: 49.8620, lng: -97.3650, type: 'residential' },
+    { id: 'prop-056', address: '48 Deer Pointe Drive', zone: 'Headingley South', lat: 49.8615, lng: -97.3640, type: 'residential' },
 ];
 
 /**
