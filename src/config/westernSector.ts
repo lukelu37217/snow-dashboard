@@ -125,6 +125,7 @@ export const WESTERN_SECTOR_ZONES: string[] = [
     
     // === SOUTH ===
     'Whyte Ridge',
+    'Scurfield Industrial',   // Industrial zone between Whyte Ridge and Kenaston
     'Pointe West',
     'Fort Richmond',
     'University of Manitoba',
