@@ -1243,14 +1243,32 @@ const BottomSheet: React.FC<{
             </span>
           </div>
           
-          {/* Expand indicator */}
-          <div style={{ 
-            transform: sheetHeight === 'expanded' ? 'rotate(180deg)' : 'rotate(0)',
-            transition: 'transform 0.3s ease',
-            color: '#9ca3af'
-          }}>
-            <ChevronUpIcon size={20} color="#9ca3af" />
-          </div>
+          {/* Map button - collapses sheet to show map */}
+          <button
+            onClick={() => setSheetHeight('collapsed')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              backgroundColor: sheetHeight === 'collapsed' ? '#f0fdf4' : '#f9fafb',
+              color: sheetHeight === 'collapsed' ? '#16a34a' : '#374151',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'Inter, system-ui, sans-serif',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+              <line x1="8" y1="2" x2="8" y2="18" />
+              <line x1="16" y1="6" x2="16" y2="22" />
+            </svg>
+            Map
+          </button>
         </div>
       </div>
       

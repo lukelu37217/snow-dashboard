@@ -20,6 +20,15 @@ import { getZoneStatus, getZoneColor, getZoneLevel } from '../../utils/zoneStatu
 import type { SyntheticZone } from '../../utils/syntheticZones';
 import { isInOperationalArea } from '../../config/westernSector';
 
+// Fix Leaflet default icon issue (prevents broken default markers)
+// @ts-ignore
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
 interface SnowMapProps {
     geoJsonData: any;
     weatherData: Map<string, WeatherData>;
@@ -768,6 +777,13 @@ const PropertyMarkersLayer: React.FC<{
     useEffect(() => {
         if (!map) return;
 
+        // Ensure markersPane exists before adding markers
+        if (!map.getPane('markersPane')) {
+            const markersPane = map.createPane('markersPane');
+            markersPane.style.zIndex = '600';
+            markersPane.style.pointerEvents = 'auto';
+        }
+
         // Remove existing markers
         if (markersRef.current) {
             map.removeLayer(markersRef.current);
@@ -776,8 +792,17 @@ const PropertyMarkersLayer: React.FC<{
         // Create new layer group
         markersRef.current = L.layerGroup();
 
-        // Add markers for each property
+        // Add markers for each property with valid coordinates
         CLIENT_PROPERTIES.forEach(property => {
+            // Validate coordinates before creating marker
+            if (!property.lat || !property.lng || 
+                isNaN(property.lat) || isNaN(property.lng) ||
+                property.lat < 49 || property.lat > 51 ||
+                property.lng < -98 || property.lng > -96) {
+                console.warn(`Invalid coordinates for property ${property.address}:`, property.lat, property.lng);
+                return;
+            }
+
             const zoneId = getZoneIdFromName(property.zone);
             const data = zoneId ? weatherData.get(zoneId) : undefined;
             const status = getZoneStatus(data);
