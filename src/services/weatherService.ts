@@ -2,9 +2,13 @@
 import axios from 'axios';
 import { getObservation } from './weatherCanadaService';
 
-// Open-Meteo allows up to 1000 locations per request - use larger batches
-const BATCH_SIZE = 100;
+// Open-Meteo free tier limits:
+// - Max ~100 locations per request (to avoid 429 errors)
+// - Rate limit: ~10 requests per minute
+// Use smaller batches and longer delays to stay within limits
+const BATCH_SIZE = 50; // Reduced from 100 to avoid rate limiting
 const BASE_URL = 'https://api.open-meteo.com/v1/forecast';
+const CHUNK_DELAY_MS = 2000; // 2 seconds between chunks to respect rate limits
 
 // ============= FALLBACK MODE =============
 // Set to true to use mock data when API is rate-limited (429 errors)
@@ -148,7 +152,7 @@ const calculateSnowRemoval = (hourly: any, snowAccum24h: number = 0): SnowRemova
 
 const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
 
-const fetchWithRetry = async (url: string, params: any, retries = 3, delay = 2000): Promise<any> => {
+const fetchWithRetry = async (url: string, params: any, retries = 3, delay = 3000): Promise<any> => {
     try {
         const response = await axios.get(url, { params, timeout: 30000 }); // Longer timeout for large batches
         return response.data;
@@ -158,8 +162,12 @@ const fetchWithRetry = async (url: string, params: any, retries = 3, delay = 200
         const retryAfterMs = retryAfterHeader ? Number(retryAfterHeader) * 1000 : null;
 
         if (retries > 0 && (status === 429 || status === 503 || status === 500)) {
-            const backoff = retryAfterMs ?? delay * 2 + Math.floor(Math.random() * 1000);
-            console.log(`Rate limited (${status}), waiting ${backoff}ms before retry...`);
+            // For 429 errors, use exponential backoff with jitter
+            // Minimum 5 seconds, maximum 60 seconds
+            const baseBackoff = retryAfterMs ?? delay * 2;
+            const jitter = Math.floor(Math.random() * 2000); // 0-2s random
+            const backoff = Math.min(60000, Math.max(5000, baseBackoff + jitter));
+            console.log(`Rate limited (${status}), waiting ${Math.round(backoff / 1000)}s before retry...`);
             await sleep(backoff);
             return fetchWithRetry(url, params, retries - 1, delay * 2);
         }
@@ -339,11 +347,15 @@ export const fetchWeatherBatch = async (locations: { id: string; lat: number; lo
 
     console.log(`Fetching weather for ${locations.length} locations...`);
 
-    // Split into chunks (Open-Meteo supports up to ~1000 per request, we use 100 to be safe)
+    // Split into smaller chunks to avoid rate limiting
+    // Open-Meteo free tier is more restrictive than documented
+    // Using 50 per batch with 2s delay between batches
     const chunks: typeof locations[] = [];
     for (let i = 0; i < locations.length; i += BATCH_SIZE) {
         chunks.push(locations.slice(i, i + BATCH_SIZE));
     }
+    
+    console.log(`Split into ${chunks.length} chunks of max ${BATCH_SIZE} locations each`);
 
     const results: WeatherData[] = [];
 
@@ -428,9 +440,11 @@ export const fetchWeatherBatch = async (locations: { id: string; lat: number; lo
             });
         }
 
-        // Small delay between chunks to avoid rate limits (only if multiple chunks)
+        // Delay between chunks to respect rate limits
+        // Open-Meteo free tier: ~10 requests per minute
         if (chunks.length > 1 && chunkIdx < chunks.length - 1) {
-            await sleep(500);
+            console.log(`Waiting ${CHUNK_DELAY_MS}ms before next chunk to respect rate limits...`);
+            await sleep(CHUNK_DELAY_MS);
         }
     }
 
