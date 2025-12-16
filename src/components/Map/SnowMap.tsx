@@ -817,38 +817,28 @@ const PropertyMarkersLayer: React.FC<{
             const status = getZoneStatus(data);
             const isSelected = property.id === selectedPropertyId;
 
-            // Create custom icon based on zone status color
-            const iconHtml = `
-                <div style="
-                    width: ${isSelected ? '16px' : '12px'};
-                    height: ${isSelected ? '16px' : '12px'};
-                    background-color: ${status.color};
-                    border: 2px solid ${isSelected ? '#06b6d4' : 'white'};
-                    border-radius: 50%;
-                    box-shadow: ${isSelected 
-                        ? '0 0 8px rgba(6, 182, 212, 0.8), 0 2px 6px rgba(0,0,0,0.3)' 
-                        : '0 2px 6px rgba(0,0,0,0.3)'};
-                    cursor: pointer;
-                    transition: all 0.2s;
-                "></div>
-            `;
-
-            const icon = L.divIcon({
-                html: iconHtml,
-                className: 'property-marker',
-                iconSize: [isSelected ? 20 : 16, isSelected ? 20 : 16],
-                iconAnchor: [isSelected ? 10 : 8, isSelected ? 10 : 8]
-            });
-
-            // Use markersPane for higher z-index (fixes mobile visibility)
-            // Leaflet uses [lat, lng] format
-            const marker = L.marker([property.lat, property.lng], { 
-                icon,
+            // Try using CircleMarker instead of divIcon for better compatibility
+            const marker = L.circleMarker([property.lat, property.lng], {
+                radius: isSelected ? 8 : 6,
+                fillColor: status.color,
+                color: isSelected ? '#06b6d4' : 'white',
+                weight: isSelected ? 3 : 2,
+                opacity: 1,
+                fillOpacity: 1,
                 pane: 'markersPane',
-                // Ensure marker is interactive
-                interactive: true,
-                keyboard: true
+                interactive: true
             });
+            
+            // Add custom class for styling
+            if (marker.getElement) {
+                const element = marker.getElement();
+                if (element && element instanceof HTMLElement) {
+                    element.classList.add('property-marker-circle');
+                    if (isSelected) {
+                        element.classList.add('property-marker-selected');
+                    }
+                }
+            }
             
 
             // Tooltip with address info
@@ -1105,6 +1095,17 @@ const SnowMap: React.FC<SnowMapProps> = ({
                 }
                 .ghost-zone-label::before { display: none !important; }
                 .property-marker { background: transparent !important; border: none !important; }
+                .property-marker-circle {
+                    cursor: pointer !important;
+                    transition: all 0.2s ease !important;
+                }
+                .property-marker-circle:hover {
+                    transform: scale(1.2) !important;
+                }
+                .property-marker-selected {
+                    filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.8)) !important;
+                    z-index: 1000 !important;
+                }
                 .property-tooltip {
                     background: rgba(255, 255, 255, 0.98) !important;
                     border: 1px solid rgba(0, 0, 0, 0.1) !important;

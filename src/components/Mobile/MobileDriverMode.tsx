@@ -646,9 +646,8 @@ const ZoneDetailCard: React.FC<{
   propertiesInZone: ClientProperty[];
   onSelectProperty: (property: ClientProperty) => void;
   selectedPropertyId?: string | null;
-  onClearPropertySelection?: () => void;
   forecast?: DetailedForecast | null;
-}> = ({ feature, weatherData, onClose, propertiesInZone, onSelectProperty, selectedPropertyId, onClearPropertySelection }) => {
+}> = ({ feature, weatherData, onClose, propertiesInZone, onSelectProperty, selectedPropertyId }) => {
   const status = getZoneStatus(weatherData);
   
   // Calculate snow removal data like desktop
@@ -713,54 +712,29 @@ const ZoneDetailCard: React.FC<{
             {selectedPropertyId ? feature.properties.name : `${propertiesInZone.length} properties`}
           </span>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {/* Back to zone button when property is selected */}
-          {selectedPropertyId && onClearPropertySelection && (
-            <button
-              onClick={onClearPropertySelection}
-              style={{
-                padding: '6px 12px',
-                border: '1px solid #e5e7eb',
-                borderRadius: '6px',
-                backgroundColor: '#f9fafb',
-                color: '#374151',
-                fontSize: '0.75rem',
-                fontWeight: 500,
-                cursor: 'pointer',
-                fontFamily: 'Inter, system-ui, sans-serif',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
-            >
-              <span style={{ transform: 'rotate(180deg)', display: 'inline-block' }}>
-                <ChevronRightIcon size={12} color="#6b7280" />
-              </span>
-              Back
-            </button>
-          )}
-          {/* All Zones button */}
-          <button
-            onClick={onClose}
-            style={{
-              padding: '6px 12px',
-              border: '1px solid #e5e7eb',
-              borderRadius: '6px',
-              backgroundColor: '#f9fafb',
-              color: '#374151',
-              fontSize: '0.75rem',
-              fontWeight: 500,
-              cursor: 'pointer',
-              fontFamily: 'Inter, system-ui, sans-serif',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-          >
-            <MapPinIcon size={12} color="#6b7280" />
-            All Zones
-          </button>
-        </div>
+        {/* Back button - always shows, returns to all zones */}
+        <button
+          onClick={onClose}
+          style={{
+            padding: '6px 12px',
+            border: '1px solid #e5e7eb',
+            borderRadius: '6px',
+            backgroundColor: '#f9fafb',
+            color: '#374151',
+            fontSize: '0.75rem',
+            fontWeight: 500,
+            cursor: 'pointer',
+            fontFamily: 'Inter, system-ui, sans-serif',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}
+        >
+          <span style={{ transform: 'rotate(180deg)', display: 'inline-block' }}>
+            <ChevronRightIcon size={12} color="#6b7280" />
+          </span>
+          Back
+        </button>
       </div>
       
       {/* SECTION A: Ground Reality - Like Desktop */}
@@ -1602,7 +1576,6 @@ const BottomSheet: React.FC<{
   onSelectZone: (feature: any) => void;
   selectedFeature: any;
   onClearSelection: () => void;
-  onClearPropertySelection: () => void;
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
   // NEW: Forecast data
@@ -1616,7 +1589,6 @@ const BottomSheet: React.FC<{
   onSelectZone,
   selectedFeature,
   onClearSelection,
-  onClearPropertySelection,
   viewMode,
   setViewMode,
   forecast,
@@ -1910,7 +1882,6 @@ const BottomSheet: React.FC<{
             propertiesInZone={propertiesInZone}
             onSelectProperty={onSelectProperty}
             selectedPropertyId={selectedPropertyId}
-            onClearPropertySelection={onClearPropertySelection}
             forecast={forecast}
           />
         ) : (
@@ -1981,7 +1952,6 @@ const MobileDriverMode: React.FC<MobileDriverModeProps> = ({
         onSelectZone={onSelectZone}
         selectedFeature={selectedFeature}
         onClearSelection={handleClearSelection}
-        onClearPropertySelection={() => onSelectProperty({ id: '', address: '', zone: '', lat: 0, lng: 0, type: 'residential' } as ClientProperty)}
         viewMode={viewMode}
         setViewMode={setViewMode}
         forecast={forecast || null}
