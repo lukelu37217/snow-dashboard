@@ -269,7 +269,10 @@ const PropertyList: React.FC<PropertyListProps> = ({
                                         return (
                                             <div
                                                 key={property.id}
-                                                onClick={() => onSelectProperty(property)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation(); // Prevent zone collapse
+                                                    onSelectProperty(property);
+                                                }}
                                                 style={{
                                                     padding: '8px 12px',
                                                     marginLeft: '8px',

@@ -78,6 +78,8 @@ export const SERVICE_ZONE_WHITELIST: string[] = [
     // === HEADINGLEY (RM - Premium Standalone Area) ===
     'Headingley South', // Taylor Farm, Charlesglen, Wescana, South Headingley, Assiniboine Landing
     'Headingley North', // Deer Pointe, Seekings, Portage Ave west of Perimeter
+    'West Perimeter South', // Fill gap between Headingley and Charleswood
+    'Wilkes South',     // Fill gap south of Headingley
     
     // === CHARLESWOOD CLUSTER (Inside Winnipeg) ===
     'Ridgedale',        // Ridgedale Cres, 4515 Roblin

@@ -158,9 +158,10 @@ const NeighborhoodDetail: React.FC<NeighborhoodDetailProps> = ({ name, data, for
     const currentSnowRate = getCurrentSnowRate();
     const currentCondition = getCurrentCondition();
     
-    // Progress to 5cm threshold (based on past + future accumulation)
+    // Total expected (past + future) - used for Section B forecast decisions
     const totalExpected = pastSnow24h + futureSnow24h;
-    const progressTo5cm = Math.min((totalExpected / 5) * 100, 100);
+    // Progress to 5cm threshold (based on past accumulation only - matches big number in Section A)
+    const progressTo5cm = Math.min((pastSnow24h / 5) * 100, 100);
 
     return (
         <div style={{
@@ -309,13 +310,13 @@ const NeighborhoodDetail: React.FC<NeighborhoodDetailProps> = ({ name, data, for
                                     backgroundColor: '#f59e0b',
                                     zIndex: 2
                                 }} />
-                                {/* Progress fill - use totalExpected for progress bar */}
+                                {/* Progress fill - use pastSnow24h for progress bar (matches big number) */}
                                 <div style={{
                                     height: '100%',
                                     width: `${progressTo5cm}%`,
-                                    background: totalExpected >= 5 
+                                    background: pastSnow24h >= 5 
                                         ? 'linear-gradient(90deg, #22c55e 0%, #f59e0b 20%, #ef4444 100%)'
-                                        : totalExpected >= 1
+                                        : pastSnow24h >= 1
                                         ? 'linear-gradient(90deg, #22c55e 0%, #f59e0b 100%)'
                                         : '#22c55e',
                                     borderRadius: '6px',
@@ -354,14 +355,14 @@ const NeighborhoodDetail: React.FC<NeighborhoodDetailProps> = ({ name, data, for
                                 }}>
                                     {thresholdStatus.level}
                                 </div>
-                                {totalExpected < 5 && totalExpected >= 1 && (
+                                {pastSnow24h < 5 && pastSnow24h >= 1 && (
                                     <div style={{ fontSize: '0.8rem', color: thresholdStatus.color, marginTop: '2px' }}>
-                                        {(5 - totalExpected).toFixed(1)}cm to Commercial trigger
+                                        {(5 - pastSnow24h).toFixed(1)}cm to Commercial trigger
                                     </div>
                                 )}
-                                {totalExpected < 1 && (
+                                {pastSnow24h < 1 && (
                                     <div style={{ fontSize: '0.8rem', color: thresholdStatus.color, marginTop: '2px' }}>
-                                        {(1 - totalExpected).toFixed(1)}cm to Residential trigger
+                                        {(1 - pastSnow24h).toFixed(1)}cm to Residential trigger
                                     </div>
                                 )}
                             </div>
