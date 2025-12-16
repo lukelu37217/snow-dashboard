@@ -457,14 +457,19 @@ const RainViewerRadar: React.FC<{ enabled: boolean }> = ({ enabled }) => {
     );
 };
 
-// Map Bounds Refocuser
+// Map Bounds Refocuser - Only runs ONCE on initial load
 const MapRefocuser: React.FC<{ data: any }> = ({ data }) => {
     const map = useMap();
+    const hasInitialized = useRef(false);
+    
     useEffect(() => {
-        if (data) {
+        // Only fit bounds ONCE when data first loads
+        // After that, keep user's current view when selecting zones
+        if (data && !hasInitialized.current) {
             const geoJsonLayer = L.geoJSON(data);
             if (geoJsonLayer.getLayers().length > 0) {
                 map.fitBounds(geoJsonLayer.getBounds(), { padding: [50, 50] });
+                hasInitialized.current = true;
             }
         }
     }, [data, map]);
@@ -1039,6 +1044,34 @@ const SnowMap: React.FC<SnowMapProps> = ({
             />
 
             <style>{`
+                /* Default Leaflet tooltip - clean white style */
+                .leaflet-tooltip {
+                    background: rgba(255, 255, 255, 0.98) !important;
+                    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+                    border-radius: 8px !important;
+                    color: #1f2937 !important;
+                    font-weight: 500 !important;
+                    font-size: 12px !important;
+                    padding: 6px 10px !important;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+                    font-family: -apple-system, BlinkMacSystemFont, sans-serif !important;
+                }
+                .leaflet-tooltip::before { display: none !important; }
+                
+                /* Default Leaflet popup - clean white style */
+                .leaflet-popup-content-wrapper {
+                    background: rgba(255, 255, 255, 0.98) !important;
+                    border-radius: 12px !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2) !important;
+                }
+                .leaflet-popup-tip {
+                    background: rgba(255, 255, 255, 0.98) !important;
+                }
+                .leaflet-popup-content {
+                    color: #1f2937 !important;
+                    margin: 12px !important;
+                }
+                
                 .snow-label-apple {
                     background: rgba(255, 255, 255, 0.95) !important;
                     border: 1px solid rgba(0, 0, 0, 0.1) !important;
@@ -1052,14 +1085,14 @@ const SnowMap: React.FC<SnowMapProps> = ({
                 }
                 .snow-label-apple::before { display: none !important; }
                 .ghost-zone-label {
-                    background: rgba(148, 163, 184, 0.9) !important;
-                    border: none !important;
-                    border-radius: 4px !important;
-                    color: white !important;
+                    background: rgba(255, 255, 255, 0.95) !important;
+                    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+                    border-radius: 6px !important;
+                    color: #64748b !important;
                     font-weight: 500 !important;
                     font-size: 10px !important;
-                    padding: 2px 6px !important;
-                    box-shadow: none !important;
+                    padding: 3px 8px !important;
+                    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
                 }
                 .ghost-zone-label::before { display: none !important; }
                 .property-marker { background: transparent !important; border: none !important; }

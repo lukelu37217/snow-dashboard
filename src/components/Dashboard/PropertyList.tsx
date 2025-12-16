@@ -23,6 +23,7 @@ interface PropertyListProps {
     geoJsonData: any;
     selectedPropertyId?: string | null;
     onSelectProperty: (property: ClientProperty) => void;
+    onSelectZone?: (zoneId: string) => void; // NEW: Zone click handler for map navigation
 }
 
 type FilterType = 'all' | 'commercial' | 'residential' | 'clear';
@@ -31,7 +32,8 @@ const PropertyList: React.FC<PropertyListProps> = ({
     weatherData,
     geoJsonData,
     selectedPropertyId,
-    onSelectProperty
+    onSelectProperty,
+    onSelectZone
 }) => {
     const [expandedZones, setExpandedZones] = useState<Set<string>>(new Set());
     const [filter, setFilter] = useState<FilterType>('all');
@@ -95,6 +97,17 @@ const PropertyList: React.FC<PropertyListProps> = ({
             }
             return newSet;
         });
+    };
+
+    // Handle zone header click - navigate to zone on map AND toggle expansion
+    const handleZoneClick = (group: typeof zoneGroups[0]) => {
+        // Toggle expansion
+        toggleZone(group.zoneName);
+        
+        // Navigate to zone on map if handler is provided
+        if (onSelectZone && group.zoneId) {
+            onSelectZone(group.zoneId);
+        }
     };
 
     return (
@@ -205,9 +218,9 @@ const PropertyList: React.FC<PropertyListProps> = ({
 
                     return (
                         <div key={group.zoneName} style={{ marginBottom: '6px' }}>
-                            {/* Zone Header */}
+                            {/* Zone Header - Click to expand AND navigate to zone on map */}
                             <div
-                                onClick={() => toggleZone(group.zoneName)}
+                                onClick={() => handleZoneClick(group)}
                                 style={{
                                     backgroundColor: hasSelectedProperty ? '#eff6ff' : '#f8fafc',
                                     borderLeft: `4px solid ${group.status.color}`,

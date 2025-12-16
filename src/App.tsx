@@ -192,12 +192,16 @@ function App() {
       setSelectedZoneId(id);
       setSelectedPropertyId(null);
       
-      // Note: flyTo disabled per user request
-      
+      // Fly to zone on map when clicked from sidebar
+      if (mapRef.current && feature.geometry) {
+        const centroid = getCentroid(feature.geometry);
+        if (centroid) {
+          mapRef.current.flyTo([centroid.lat, centroid.lon], 13, { duration: 0.5 });
+        }
+      }
 
     } else if (syntheticFeature) {
       // Handle synthetic bubble zone selection
-      const data = weatherMap.get(id);
       const syntheticGeoJSON = {
         type: 'Feature',
         properties: { id: syntheticFeature.id, name: syntheticFeature.name, isSynthetic: true },
@@ -207,7 +211,10 @@ function App() {
       setSelectedFeature(syntheticGeoJSON);
       setSelectedZoneId(id);
       
-      // Note: flyTo disabled per user request
+      // Fly to synthetic zone
+      if (mapRef.current) {
+        mapRef.current.flyTo([syntheticFeature.lat, syntheticFeature.lng], 14, { duration: 0.5 });
+      }
       
     } else {
       console.warn(`⚠️ Zone ID "${id}" not found in geoData or synthetic zones!`);
@@ -227,7 +234,10 @@ function App() {
       setSelectedFeature(zoneFeature);
     }
     
-    // Note: flyTo disabled per user request
+    // Fly to property location on map when clicked from sidebar
+    if (mapRef.current && property.lat && property.lng) {
+      mapRef.current.flyTo([property.lat, property.lng], 15, { duration: 0.5 });
+    }
   };
 
   // Close handlers
@@ -274,6 +284,7 @@ function App() {
         geoJsonData={geoData}
         selectedPropertyId={selectedPropertyId}
         onSelectProperty={handlePropertySelect}
+        onSelectZone={handleAlertSelect}
       />
 
       <div style={{ marginTop: 'auto', fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center', padding: '10px' }}>
