@@ -874,23 +874,6 @@ const PropertyMarkersLayer: React.FC<{
         });
 
         markersRef.current.addTo(map);
-        
-        // Ensure markers are visible - fit bounds if markers exist
-        if (markersRef.current.getLayers().length > 0) {
-            try {
-                const group = new L.FeatureGroup(markersRef.current.getLayers() as L.Marker[]);
-                const bounds = group.getBounds();
-                if (bounds.isValid()) {
-                    // Only adjust if current view doesn't contain all markers
-                    const currentBounds = map.getBounds();
-                    if (!currentBounds.contains(bounds)) {
-                        map.fitBounds(bounds, { padding: [20, 20], maxZoom: 12 });
-                    }
-                }
-            } catch (e) {
-                // Ignore bounds errors
-            }
-        }
 
         return () => {
             if (markersRef.current) {
