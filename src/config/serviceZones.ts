@@ -78,8 +78,14 @@ export const SERVICE_ZONE_WHITELIST: string[] = [
     // === HEADINGLEY (RM - Premium Standalone Area) ===
     'Headingley South', // Taylor Farm, Charlesglen, Wescana, South Headingley, Assiniboine Landing
     'Headingley North', // Deer Pointe, Seekings, Portage Ave west of Perimeter
-    'West Perimeter South', // Fill gap between Headingley and Charleswood
-    'Wilkes South',     // Fill gap south of Headingley
+    
+    // === PERIMETER TRANSITION ZONES (Fill gaps between Headingley and Winnipeg) ===
+    'West Perimeter South', // Between Headingley South and Charleswood
+    'Wilkes South',         // South of Headingley
+    'River West Park',      // Between Headingley and Assiniboia Downs
+    'Buchanan',             // Adjacent to Assiniboia Downs
+    'Westdale',             // Fill middle gap
+    'Ridgewood South',      // South transition zone
     
     // === CHARLESWOOD CLUSTER (Inside Winnipeg) ===
     'Ridgedale',        // Ridgedale Cres, 4515 Roblin

@@ -114,8 +114,10 @@ const PropertyList: React.FC<PropertyListProps> = ({
                 gap: '6px',
                 marginBottom: '10px',
                 flexWrap: 'wrap',
-                alignItems: 'center'
+                alignItems: 'center',
+                justifyContent: 'space-between'
             }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                 <span style={{
                     fontSize: '0.75rem',
                     color: '#64748b',
@@ -180,6 +182,15 @@ const PropertyList: React.FC<PropertyListProps> = ({
                         </button>
                     )}
                 </div>
+                </div>
+                {/* 24h Forecast Label */}
+                <span style={{
+                    fontSize: '0.6rem',
+                    color: '#94a3b8',
+                    fontStyle: 'italic'
+                }}>
+                    ❄️ 24h预测
+                </span>
             </div>
 
             {/* Scrollable List */}

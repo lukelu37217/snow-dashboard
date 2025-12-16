@@ -192,13 +192,7 @@ function App() {
       setSelectedZoneId(id);
       setSelectedPropertyId(null);
       
-      // Fly to the zone on the map
-      if (mapRef.current) {
-        const centroid = getCentroid(feature.geometry);
-        if (centroid) {
-          mapRef.current.flyTo([centroid.lat, centroid.lon], 14, { duration: 1 });
-        }
-      }
+      // Note: flyTo disabled per user request
       
 
     } else if (syntheticFeature) {
@@ -213,9 +207,7 @@ function App() {
       setSelectedFeature(syntheticGeoJSON);
       setSelectedZoneId(id);
       
-      if (mapRef.current) {
-        mapRef.current.flyTo([syntheticFeature.lat, syntheticFeature.lng], 15, { duration: 1 });
-      }
+      // Note: flyTo disabled per user request
       
     } else {
       console.warn(`⚠️ Zone ID "${id}" not found in geoData or synthetic zones!`);
@@ -235,10 +227,7 @@ function App() {
       setSelectedFeature(zoneFeature);
     }
     
-    // Fly to the property location
-    if (mapRef.current) {
-      mapRef.current.flyTo([property.lat, property.lng], 16, { duration: 1 });
-    }
+    // Note: flyTo disabled per user request
   };
 
   // Close handlers
