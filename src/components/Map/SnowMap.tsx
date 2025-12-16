@@ -800,13 +800,17 @@ const PropertyMarkersLayer: React.FC<{
         // Add markers for each property with valid coordinates
         CLIENT_PROPERTIES.forEach(property => {
             // Validate coordinates before creating marker
+            // Winnipeg area: lat ~49.8, lng ~-97.1
+            // Allow wider range to catch edge cases
             if (!property.lat || !property.lng || 
                 isNaN(property.lat) || isNaN(property.lng) ||
-                property.lat < 49 || property.lat > 51 ||
-                property.lng < -98 || property.lng > -96) {
+                property.lat === 0 || property.lng === 0 ||
+                property.lat < 49.5 || property.lat > 50.5 ||
+                property.lng < -98.5 || property.lng > -96.5) {
                 console.warn(`Invalid coordinates for property ${property.address}:`, property.lat, property.lng);
                 return;
             }
+            
 
             const zoneId = getZoneIdFromName(property.zone);
             const data = zoneId ? weatherData.get(zoneId) : undefined;
@@ -837,10 +841,15 @@ const PropertyMarkersLayer: React.FC<{
             });
 
             // Use markersPane for higher z-index (fixes mobile visibility)
+            // Leaflet uses [lat, lng] format
             const marker = L.marker([property.lat, property.lng], { 
                 icon,
-                pane: 'markersPane'
+                pane: 'markersPane',
+                // Ensure marker is interactive
+                interactive: true,
+                keyboard: true
             });
+            
 
             // Tooltip with address info
             marker.bindTooltip(`
@@ -865,6 +874,23 @@ const PropertyMarkersLayer: React.FC<{
         });
 
         markersRef.current.addTo(map);
+        
+        // Ensure markers are visible - fit bounds if markers exist
+        if (markersRef.current.getLayers().length > 0) {
+            try {
+                const group = new L.FeatureGroup(markersRef.current.getLayers() as L.Marker[]);
+                const bounds = group.getBounds();
+                if (bounds.isValid()) {
+                    // Only adjust if current view doesn't contain all markers
+                    const currentBounds = map.getBounds();
+                    if (!currentBounds.contains(bounds)) {
+                        map.fitBounds(bounds, { padding: [20, 20], maxZoom: 12 });
+                    }
+                }
+            } catch (e) {
+                // Ignore bounds errors
+            }
+        }
 
         return () => {
             if (markersRef.current) {

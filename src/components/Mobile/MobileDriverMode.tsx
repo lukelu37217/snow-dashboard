@@ -645,8 +645,10 @@ const ZoneDetailCard: React.FC<{
   onClose: () => void;
   propertiesInZone: ClientProperty[];
   onSelectProperty: (property: ClientProperty) => void;
+  selectedPropertyId?: string | null;
+  onClearPropertySelection?: () => void;
   forecast?: DetailedForecast | null;
-}> = ({ feature, weatherData, onClose, propertiesInZone, onSelectProperty }) => {
+}> = ({ feature, weatherData, onClose, propertiesInZone, onSelectProperty, selectedPropertyId, onClearPropertySelection }) => {
   const status = getZoneStatus(weatherData);
   
   // Calculate snow removal data like desktop
@@ -699,36 +701,66 @@ const ZoneDetailCard: React.FC<{
             color: '#111827',
             fontFamily: 'Inter, system-ui, sans-serif'
           }}>
-            {feature.properties.name}
+            {selectedPropertyId 
+              ? propertiesInZone.find(p => p.id === selectedPropertyId)?.address || feature.properties.name
+              : feature.properties.name}
           </h3>
           <span style={{ 
             fontSize: '0.75rem', 
             color: '#6b7280',
             fontFamily: 'Inter, system-ui, sans-serif'
           }}>
-            {propertiesInZone.length} properties
+            {selectedPropertyId ? feature.properties.name : `${propertiesInZone.length} properties`}
           </span>
         </div>
-        <button
-          onClick={onClose}
-          style={{
-            padding: '6px 12px',
-            border: '1px solid #e5e7eb',
-            borderRadius: '6px',
-            backgroundColor: '#f9fafb',
-            color: '#374151',
-            fontSize: '0.75rem',
-            fontWeight: 500,
-            cursor: 'pointer',
-            fontFamily: 'Inter, system-ui, sans-serif',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px'
-          }}
-        >
-          <MapPinIcon size={12} color="#6b7280" />
-          All Zones
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {/* Back to zone button when property is selected */}
+          {selectedPropertyId && onClearPropertySelection && (
+            <button
+              onClick={onClearPropertySelection}
+              style={{
+                padding: '6px 12px',
+                border: '1px solid #e5e7eb',
+                borderRadius: '6px',
+                backgroundColor: '#f9fafb',
+                color: '#374151',
+                fontSize: '0.75rem',
+                fontWeight: 500,
+                cursor: 'pointer',
+                fontFamily: 'Inter, system-ui, sans-serif',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <span style={{ transform: 'rotate(180deg)', display: 'inline-block' }}>
+                <ChevronRightIcon size={12} color="#6b7280" />
+              </span>
+              Back
+            </button>
+          )}
+          {/* All Zones button */}
+          <button
+            onClick={onClose}
+            style={{
+              padding: '6px 12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '6px',
+              backgroundColor: '#f9fafb',
+              color: '#374151',
+              fontSize: '0.75rem',
+              fontWeight: 500,
+              cursor: 'pointer',
+              fontFamily: 'Inter, system-ui, sans-serif',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            <MapPinIcon size={12} color="#6b7280" />
+            All Zones
+          </button>
+        </div>
       </div>
       
       {/* SECTION A: Ground Reality - Like Desktop */}
@@ -1570,6 +1602,7 @@ const BottomSheet: React.FC<{
   onSelectZone: (feature: any) => void;
   selectedFeature: any;
   onClearSelection: () => void;
+  onClearPropertySelection: () => void;
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
   // NEW: Forecast data
@@ -1583,6 +1616,7 @@ const BottomSheet: React.FC<{
   onSelectZone,
   selectedFeature,
   onClearSelection,
+  onClearPropertySelection,
   viewMode,
   setViewMode,
   forecast,
@@ -1619,9 +1653,21 @@ const BottomSheet: React.FC<{
   
   const currentHeight = heights[sheetHeight];
   
+  // Update map padding when sheet height changes
+  useEffect(() => {
+    const mapContainer = document.querySelector('.leaflet-container')?.parentElement as HTMLElement;
+    if (mapContainer) {
+      mapContainer.style.paddingBottom = `${currentHeight}vh`;
+    }
+  }, [currentHeight]);
+  
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     dragStartY.current = e.touches[0].clientY;
     dragStartHeight.current = currentHeight;
+    // Disable transition during drag
+    if (sheetRef.current) {
+      sheetRef.current.style.transition = 'none';
+    }
   }, [currentHeight]);
   
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
@@ -1631,27 +1677,43 @@ const BottomSheet: React.FC<{
     
     if (sheetRef.current) {
       sheetRef.current.style.height = `${newHeight}vh`;
+      // Update map padding in real-time
+      const mapContainer = document.querySelector('.leaflet-container')?.parentElement as HTMLElement;
+      if (mapContainer) {
+        mapContainer.style.paddingBottom = `${newHeight}vh`;
+      }
     }
   }, []);
   
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    // Re-enable transition
+    if (sheetRef.current) {
+      sheetRef.current.style.transition = 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+    }
+    
     const finalY = e.changedTouches[0].clientY;
     const deltaY = dragStartY.current - finalY;
     
     if (sheetRef.current) {
-      const currentPercent = parseFloat(sheetRef.current.style.height);
+      const currentPercent = parseFloat(sheetRef.current.style.height) || currentHeight;
       
-      if (deltaY > 50 || currentPercent > 60) {
+      // Determine target state based on drag distance and final position
+      if (deltaY > 30 || currentPercent > 65) {
         setSheetHeight('expanded');
-      } else if (deltaY < -50 || currentPercent < 30) {
+      } else if (deltaY < -30 || currentPercent < 25) {
         setSheetHeight('collapsed');
       } else {
         setSheetHeight('half');
       }
       
-      sheetRef.current.style.height = '';
+      // Reset inline height to let CSS transition handle it
+      setTimeout(() => {
+        if (sheetRef.current) {
+          sheetRef.current.style.height = '';
+        }
+      }, 0);
     }
-  }, []);
+  }, [currentHeight]);
   
   // Get property status helper
   const getPropertyStatus = (property: ClientProperty) => {
@@ -1847,6 +1909,8 @@ const BottomSheet: React.FC<{
             onClose={handleClearAndShowAll}
             propertiesInZone={propertiesInZone}
             onSelectProperty={onSelectProperty}
+            selectedPropertyId={selectedPropertyId}
+            onClearPropertySelection={onClearPropertySelection}
             forecast={forecast}
           />
         ) : (
@@ -1917,6 +1981,7 @@ const MobileDriverMode: React.FC<MobileDriverModeProps> = ({
         onSelectZone={onSelectZone}
         selectedFeature={selectedFeature}
         onClearSelection={handleClearSelection}
+        onClearPropertySelection={() => onSelectProperty({ id: '', address: '', zone: '', lat: 0, lng: 0, type: 'residential' } as ClientProperty)}
         viewMode={viewMode}
         setViewMode={setViewMode}
         forecast={forecast || null}

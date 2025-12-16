@@ -289,7 +289,7 @@ function App() {
           position: 'fixed', 
           inset: 0, 
           paddingTop: '60px',  // Space for floating header
-          paddingBottom: '35vh' // Space for bottom sheet
+          paddingBottom: '20vh' // Space for bottom sheet - will be adjusted dynamically
         }}>
           {/* Radar Toggle - Top right */}
           <button
