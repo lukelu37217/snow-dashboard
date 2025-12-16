@@ -189,14 +189,6 @@ const PropertyList: React.FC<PropertyListProps> = ({
                     )}
                 </div>
                 </div>
-                {/* 24h Forecast Label */}
-                <span style={{
-                    fontSize: '0.6rem',
-                    color: '#94a3b8',
-                    fontStyle: 'italic'
-                }}>
-                    ❄️ 24h Forecast
-                </span>
             </div>
 
             {/* Scrollable List */}
