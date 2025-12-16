@@ -189,7 +189,7 @@ const PropertyList: React.FC<PropertyListProps> = ({
                     color: '#94a3b8',
                     fontStyle: 'italic'
                 }}>
-                    ❄️ 24h Forecast
+                    ❄️ 24h预测
                 </span>
             </div>
 
