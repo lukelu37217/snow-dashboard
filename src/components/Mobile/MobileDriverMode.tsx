@@ -1634,58 +1634,95 @@ const BottomSheet: React.FC<{
   }, [currentHeight]);
   
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
     dragStartY.current = e.touches[0].clientY;
     dragStartHeight.current = currentHeight;
-    // Disable transition during drag
+    // Disable transition during drag for smooth movement
     if (sheetRef.current) {
       sheetRef.current.style.transition = 'none';
     }
   }, [currentHeight]);
   
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    if (!sheetRef.current) return;
+    
     const deltaY = dragStartY.current - e.touches[0].clientY;
     const deltaPercent = (deltaY / window.innerHeight) * 100;
     const newHeight = Math.max(15, Math.min(90, dragStartHeight.current + deltaPercent));
     
-    if (sheetRef.current) {
-      sheetRef.current.style.height = `${newHeight}vh`;
-      // Update map padding in real-time
-      const mapContainer = document.querySelector('.leaflet-container')?.parentElement as HTMLElement;
-      if (mapContainer) {
-        mapContainer.style.paddingBottom = `${newHeight}vh`;
-      }
+    sheetRef.current.style.height = `${newHeight}vh`;
+    
+    // Update map padding in real-time
+    const mapContainer = document.querySelector('.leaflet-container')?.parentElement as HTMLElement;
+    if (mapContainer) {
+      mapContainer.style.paddingBottom = `${newHeight}vh`;
     }
   }, []);
   
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    // Re-enable transition
-    if (sheetRef.current) {
-      sheetRef.current.style.transition = 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-    }
+    e.preventDefault();
+    if (!sheetRef.current) return;
     
     const finalY = e.changedTouches[0].clientY;
     const deltaY = dragStartY.current - finalY;
+    const currentPercent = parseFloat(sheetRef.current.style.height) || dragStartHeight.current;
     
-    if (sheetRef.current) {
-      const currentPercent = parseFloat(sheetRef.current.style.height) || currentHeight;
-      
-      // Determine target state based on drag distance and final position
-      if (deltaY > 30 || currentPercent > 65) {
-        setSheetHeight('expanded');
-      } else if (deltaY < -30 || currentPercent < 25) {
-        setSheetHeight('collapsed');
+    // Determine target state based on drag distance and final position
+    // Use clear thresholds for better UX
+    let targetState: 'collapsed' | 'half' | 'expanded';
+    
+    // Calculate velocity (pixels per move)
+    const velocity = Math.abs(deltaY);
+    
+    if (velocity < 15) {
+      // Very small movement - snap to nearest state based on current position
+      if (currentPercent < 30) {
+        targetState = 'collapsed';
+      } else if (currentPercent > 70) {
+        targetState = 'expanded';
       } else {
-        setSheetHeight('half');
+        targetState = 'half';
       }
-      
-      // Reset inline height to let CSS transition handle it
-      setTimeout(() => {
-        if (sheetRef.current) {
-          sheetRef.current.style.height = '';
-        }
-      }, 0);
+    } else if (deltaY > 25) {
+      // Dragging up significantly - expand
+      targetState = currentPercent > 55 ? 'expanded' : 'half';
+    } else if (deltaY < -25) {
+      // Dragging down significantly - collapse
+      targetState = currentPercent < 40 ? 'collapsed' : 'half';
+    } else {
+      // Medium movement - snap to nearest state
+      if (currentPercent < 30) {
+        targetState = 'collapsed';
+      } else if (currentPercent > 70) {
+        targetState = 'expanded';
+      } else {
+        targetState = 'half';
+      }
     }
-  }, [currentHeight]);
+    
+    // Set new state first
+    setSheetHeight(targetState);
+    
+    // Re-enable transition and clear inline height
+    // Use double RAF to ensure state has updated
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (sheetRef.current) {
+          sheetRef.current.style.transition = 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+          // Clear inline height to let CSS transition handle it
+          sheetRef.current.style.height = '';
+          
+          // Update map padding to match new state
+          const targetHeight = heights[targetState];
+          const mapContainer = document.querySelector('.leaflet-container')?.parentElement as HTMLElement;
+          if (mapContainer) {
+            mapContainer.style.paddingBottom = `${targetHeight}vh`;
+          }
+        }
+      });
+    });
+  }, []);
   
   // Get property status helper
   const getPropertyStatus = (property: ClientProperty) => {
@@ -1749,10 +1786,14 @@ const BottomSheet: React.FC<{
           alignItems: 'center',
           cursor: 'grab',
           touchAction: 'none',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
           backgroundColor: '#ffffff',
           borderTopLeftRadius: '16px',
           borderTopRightRadius: '16px',
-          borderBottom: '1px solid #f3f4f6'
+          borderBottom: '1px solid #f3f4f6',
+          position: 'relative',
+          zIndex: 10
         }}
       >
         {/* Gray drag handle line */}
