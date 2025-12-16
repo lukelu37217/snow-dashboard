@@ -269,29 +269,7 @@ function App() {
     observationTime: ''
   } : null;
 
-  // Sidebar content component (shared between desktop and mobile drawer)
-  const SidebarContent = () => (
-    <>
-      <MetricsCards
-        realTime={cityWeather && cityWeather.current.source === 'observation' ? realTimeProp : null}
-        forecastCurrent={cityWeather ? cityWeather.forecast.current : null}
-        avgSnow24h={avgSnow}
-        maxSnow24h={maxSnow}
-      />
-
-      <PropertyList
-        weatherData={weatherMap}
-        geoJsonData={geoData}
-        selectedPropertyId={selectedPropertyId}
-        onSelectProperty={handlePropertySelect}
-        onSelectZone={handleAlertSelect}
-      />
-
-      <div style={{ marginTop: 'auto', fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center', padding: '10px' }}>
-        Snow Command v2.2 (Driver Mode)
-      </div>
-    </>
-  );
+  // Sidebar content - rendered inline to prevent PropertyList from remounting and losing expanded state
 
   // Combined GeoJSON with synthetic zones
   const combinedGeoData = geoData ? {
@@ -394,7 +372,23 @@ function App() {
             flexDirection: 'column'
           }}
         >
-          <SidebarContent />
+          <MetricsCards
+            realTime={cityWeather && cityWeather.current.source === 'observation' ? realTimeProp : null}
+            forecastCurrent={cityWeather ? cityWeather.forecast.current : null}
+            avgSnow24h={avgSnow}
+            maxSnow24h={maxSnow}
+          />
+
+          <PropertyList
+            weatherData={weatherMap}
+            geoJsonData={geoData}
+            selectedPropertyId={selectedPropertyId}
+            onSelectProperty={handlePropertySelect}
+          />
+
+          <div style={{ marginTop: 'auto', fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center', padding: '10px' }}>
+            Snow Command v2.2 (Driver Mode)
+          </div>
         </div>
 
         {/* Map Container */}

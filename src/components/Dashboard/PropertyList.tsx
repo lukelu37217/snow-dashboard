@@ -23,7 +23,6 @@ interface PropertyListProps {
     geoJsonData: any;
     selectedPropertyId?: string | null;
     onSelectProperty: (property: ClientProperty) => void;
-    onSelectZone?: (zoneId: string) => void; // NEW: Zone click handler for map navigation
 }
 
 type FilterType = 'all' | 'commercial' | 'residential' | 'clear';
@@ -32,8 +31,7 @@ const PropertyList: React.FC<PropertyListProps> = ({
     weatherData,
     geoJsonData,
     selectedPropertyId,
-    onSelectProperty,
-    onSelectZone
+    onSelectProperty
 }) => {
     const [expandedZones, setExpandedZones] = useState<Set<string>>(new Set());
     const [filter, setFilter] = useState<FilterType>('all');
@@ -99,15 +97,10 @@ const PropertyList: React.FC<PropertyListProps> = ({
         });
     };
 
-    // Handle zone header click - navigate to zone on map AND toggle expansion
+    // Handle zone header click - ONLY toggle expansion (no navigation)
     const handleZoneClick = (group: typeof zoneGroups[0]) => {
-        // Toggle expansion
+        // Only toggle expansion - clicking zone name doesn't navigate
         toggleZone(group.zoneName);
-        
-        // Navigate to zone on map if handler is provided
-        if (onSelectZone && group.zoneId) {
-            onSelectZone(group.zoneId);
-        }
     };
 
     return (
