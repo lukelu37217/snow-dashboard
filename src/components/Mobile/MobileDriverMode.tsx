@@ -1621,7 +1621,7 @@ const BottomSheet: React.FC<{
     collapsed: 20,
     half: 40,
     expanded: 85
-  };
+  } as const;
   
   const currentHeight = heights[sheetHeight];
   
@@ -1633,24 +1633,42 @@ const BottomSheet: React.FC<{
     }
   }, [currentHeight]);
   
+  const isDragging = useRef(false);
+  const lastMoveTime = useRef(0);
+  
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    e.preventDefault();
+    const target = e.target as HTMLElement;
+    // Don't start drag if clicking on interactive elements
+    if (target.closest('button, a, input, [role="button"]')) {
+      isDragging.current = false;
+      return;
+    }
+    
+    isDragging.current = true;
     dragStartY.current = e.touches[0].clientY;
     dragStartHeight.current = currentHeight;
-    // Disable transition during drag for smooth movement
+    lastMoveTime.current = Date.now();
+    
+    // Disable transition during drag
     if (sheetRef.current) {
       sheetRef.current.style.transition = 'none';
     }
   }, [currentHeight]);
   
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    e.preventDefault();
-    if (!sheetRef.current) return;
+    if (!isDragging.current || !sheetRef.current) {
+      return;
+    }
     
-    const deltaY = dragStartY.current - e.touches[0].clientY;
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const currentY = e.touches[0].clientY;
+    const deltaY = dragStartY.current - currentY;
     const deltaPercent = (deltaY / window.innerHeight) * 100;
     const newHeight = Math.max(15, Math.min(90, dragStartHeight.current + deltaPercent));
     
+    // Update height immediately for smooth drag
     sheetRef.current.style.height = `${newHeight}vh`;
     
     // Update map padding in real-time
@@ -1658,40 +1676,47 @@ const BottomSheet: React.FC<{
     if (mapContainer) {
       mapContainer.style.paddingBottom = `${newHeight}vh`;
     }
+    
+    lastMoveTime.current = Date.now();
   }, []);
   
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    e.preventDefault();
-    if (!sheetRef.current) return;
+    if (!isDragging.current) {
+      return;
+    }
+    
+    isDragging.current = false;
+    
+    if (!sheetRef.current) {
+      return;
+    }
     
     const finalY = e.changedTouches[0].clientY;
     const deltaY = dragStartY.current - finalY;
     const currentPercent = parseFloat(sheetRef.current.style.height) || dragStartHeight.current;
     
-    // Determine target state based on drag distance and final position
-    // Use clear thresholds for better UX
+    // Determine target state - use both drag distance and final position
     let targetState: 'collapsed' | 'half' | 'expanded';
     
-    // Calculate velocity (pixels per move)
-    const velocity = Math.abs(deltaY);
-    
-    if (velocity < 15) {
-      // Very small movement - snap to nearest state based on current position
-      if (currentPercent < 30) {
-        targetState = 'collapsed';
-      } else if (currentPercent > 70) {
-        targetState = 'expanded';
+    // Priority: drag distance > final position
+    if (Math.abs(deltaY) > 40) {
+      // Significant drag - follow direction
+      if (deltaY > 0) {
+        // Dragged up
+        targetState = currentPercent > 55 ? 'expanded' : 'half';
       } else {
-        targetState = 'half';
+        // Dragged down
+        targetState = currentPercent < 40 ? 'collapsed' : 'half';
       }
-    } else if (deltaY > 25) {
-      // Dragging up significantly - expand
-      targetState = currentPercent > 55 ? 'expanded' : 'half';
-    } else if (deltaY < -25) {
-      // Dragging down significantly - collapse
-      targetState = currentPercent < 40 ? 'collapsed' : 'half';
+    } else if (Math.abs(deltaY) > 20) {
+      // Medium drag - still follow direction but be more conservative
+      if (deltaY > 0) {
+        targetState = currentPercent > 65 ? 'expanded' : 'half';
+      } else {
+        targetState = currentPercent < 30 ? 'collapsed' : 'half';
+      }
     } else {
-      // Medium movement - snap to nearest state
+      // Small movement - snap to nearest state based on position
       if (currentPercent < 30) {
         targetState = 'collapsed';
       } else if (currentPercent > 70) {
@@ -1701,27 +1726,25 @@ const BottomSheet: React.FC<{
       }
     }
     
-    // Set new state first
+    // Update state
     setSheetHeight(targetState);
     
-    // Re-enable transition and clear inline height
-    // Use double RAF to ensure state has updated
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (sheetRef.current) {
-          sheetRef.current.style.transition = 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-          // Clear inline height to let CSS transition handle it
-          sheetRef.current.style.height = '';
-          
-          // Update map padding to match new state
-          const targetHeight = heights[targetState];
-          const mapContainer = document.querySelector('.leaflet-container')?.parentElement as HTMLElement;
-          if (mapContainer) {
-            mapContainer.style.paddingBottom = `${targetHeight}vh`;
-          }
+    // Re-enable transition and sync with state
+    // Use setTimeout to ensure state update happens first
+    const targetHeight = heights[targetState];
+    setTimeout(() => {
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        // Clear inline style to let CSS handle transition
+        sheetRef.current.style.height = '';
+        
+        // Ensure map padding matches
+        const mapContainer = document.querySelector('.leaflet-container')?.parentElement as HTMLElement;
+        if (mapContainer) {
+          mapContainer.style.paddingBottom = `${targetHeight}vh`;
         }
-      });
-    });
+      }
+    }, 10);
   }, []);
   
   // Get property status helper
@@ -1774,8 +1797,9 @@ const BottomSheet: React.FC<{
         overflow: 'hidden',
       }}
     >
-      {/* Drag Handle - Professional design */}
+      {/* Drag Handle - Expanded drag area for better UX */}
       <div
+        className="drag-handle-area"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -1785,7 +1809,7 @@ const BottomSheet: React.FC<{
           flexDirection: 'column',
           alignItems: 'center',
           cursor: 'grab',
-          touchAction: 'none',
+          touchAction: 'none', // Disable default touch actions for drag
           userSelect: 'none',
           WebkitUserSelect: 'none',
           backgroundColor: '#ffffff',
@@ -1793,26 +1817,40 @@ const BottomSheet: React.FC<{
           borderTopRightRadius: '16px',
           borderBottom: '1px solid #f3f4f6',
           position: 'relative',
-          zIndex: 10
+          zIndex: 10,
+          minHeight: '80px' // Larger drag area for easier interaction
         }}
       >
         {/* Gray drag handle line */}
-        <div style={{
-          width: '36px',
-          height: '4px',
-          backgroundColor: '#d1d5db',
-          borderRadius: '2px',
-          marginBottom: '12px'
-        }} />
+        <div 
+          style={{
+            width: '36px',
+            height: '4px',
+            backgroundColor: '#d1d5db',
+            borderRadius: '2px',
+            marginBottom: '12px',
+            pointerEvents: 'none' // Don't block drag events
+          }} 
+        />
         
-        {/* Header content */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          width: '100%',
-          padding: '0 20px',
-        }}>
+        {/* Header content - Make entire area draggable */}
+        <div 
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            padding: '0 20px',
+            pointerEvents: 'auto' // Allow clicks on buttons
+          }}
+          onClick={(e) => {
+            // Prevent drag when clicking buttons
+            const target = e.target as HTMLElement;
+            if (target.closest('button')) {
+              e.stopPropagation();
+            }
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {urgentCount > 0 ? (
               <>
@@ -1903,12 +1941,24 @@ const BottomSheet: React.FC<{
         onViewChange={setForecastView} 
       />
       
-      {/* Content area */}
-      <div style={{
-        flex: 1,
-        overflowY: 'auto',
-        WebkitOverflowScrolling: 'touch',
-      }}>
+      {/* Content area - Scrollable but doesn't interfere with drag */}
+      <div 
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          touchAction: 'pan-y', // Allow vertical scrolling
+        }}
+        onTouchStart={(e) => {
+          // If user starts scrolling in content area, don't trigger drag
+          const target = e.target as HTMLElement;
+          if (target.closest('.drag-handle-area')) {
+            return; // Let drag handle handle it
+          }
+          // Content area scrolling - disable drag
+          isDragging.current = false;
+        }}
+      >
         {/* Forecast Views */}
         {forecastView === '24h' ? (
           <HourlyForecastView forecast={forecast} ecForecast={ecForecast} />
