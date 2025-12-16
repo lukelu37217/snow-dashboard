@@ -332,6 +332,7 @@ function App() {
         <MobileDriverMode
           temperature={cityWeather?.current?.temperature ?? null}
           snowAccumulation={maxSnow}
+          avgSnow={avgSnow}
           isSnowing={cityWeather?.current?.isSnowing || false}
           lastUpdated={lastUpdated}
           weatherData={weatherMap}

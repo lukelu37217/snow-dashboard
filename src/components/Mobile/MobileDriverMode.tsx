@@ -80,7 +80,8 @@ type ForecastView = 'live' | '24h' | '7day';
 interface MobileDriverModeProps {
   // Weather data
   temperature: number | null;
-  snowAccumulation: number;
+  snowAccumulation: number; // Max impact across all zones
+  avgSnow?: number; // Average snow across zones
   isSnowing: boolean;
   lastUpdated: string;
   
@@ -104,15 +105,16 @@ interface MobileDriverModeProps {
 }
 
 /**
- * Professional Top Bar (60px) - No Emojis
- * Format: -9°C (Bold) | 0cm | Status Pill
+ * Professional Top Bar (60px) - Enhanced with Max Impact
+ * Format: -9°C (Bold) | Max 0.6cm | Status Pill
  */
 const TopStatusBar: React.FC<{
   temperature: number | null;
-  snowAccumulation: number;
+  snowAccumulation: number; // Max impact across all zones
+  avgSnow: number; // Average snow
   onRefresh: () => void;
   isRefreshing?: boolean;
-}> = ({ temperature, snowAccumulation, onRefresh, isRefreshing }) => {
+}> = ({ temperature, snowAccumulation, avgSnow, onRefresh, isRefreshing }) => {
   const getStatusConfig = () => {
     if (snowAccumulation >= 10) return { label: 'HEAVY', color: '#dc2626', bg: '#fef2f2' };
     if (snowAccumulation >= 5) return { label: 'MODERATE', color: '#d97706', bg: '#fffbeb' };
@@ -133,7 +135,7 @@ const TopStatusBar: React.FC<{
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '0 16px',
+      padding: '0 12px',
       zIndex: 2000,
       boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
       borderBottom: '1px solid #e5e7eb',
@@ -141,7 +143,7 @@ const TopStatusBar: React.FC<{
       {/* Temperature */}
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
         <span style={{ 
-          fontSize: '1.75rem', 
+          fontSize: '1.5rem', 
           fontWeight: 700, 
           color: '#111827',
           fontFamily: 'Inter, system-ui, sans-serif',
@@ -150,7 +152,7 @@ const TopStatusBar: React.FC<{
           {temperature !== null ? temperature.toFixed(0) : '--'}
         </span>
         <span style={{ 
-          fontSize: '1rem', 
+          fontSize: '0.9rem', 
           color: '#6b7280', 
           fontWeight: 500,
           fontFamily: 'Inter, system-ui, sans-serif'
@@ -159,33 +161,48 @@ const TopStatusBar: React.FC<{
         </span>
       </div>
       
-      {/* Snow Accumulation */}
+      {/* Max Impact (24h) - Like desktop */}
       <div style={{ 
         display: 'flex', 
+        flexDirection: 'column',
         alignItems: 'center',
-        gap: '6px',
-        padding: '0 12px'
+        padding: '0 8px'
       }}>
-        <SnowflakeIcon size={16} color="#6b7280" />
-        <span style={{ 
-          fontSize: '1.1rem', 
-          fontWeight: 600,
-          color: '#374151',
-          fontFamily: 'Inter, system-ui, sans-serif'
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center',
+          gap: '4px'
         }}>
-          {snowAccumulation.toFixed(1)}cm
+          <SnowflakeIcon size={14} color="#6b7280" />
+          <span style={{ 
+            fontSize: '1rem', 
+            fontWeight: 700,
+            color: snowAccumulation > 0 ? '#2563eb' : '#374151',
+            fontFamily: 'Inter, system-ui, sans-serif'
+          }}>
+            {snowAccumulation.toFixed(1)}cm
+          </span>
+        </div>
+        <span style={{
+          fontSize: '0.6rem',
+          color: '#9ca3af',
+          fontFamily: 'Inter, system-ui, sans-serif',
+          textTransform: 'uppercase',
+          letterSpacing: '0.03em'
+        }}>
+          Max 24h
         </span>
       </div>
       
       {/* Status Pill + Refresh */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span style={{
           backgroundColor: status.bg,
           color: status.color,
-          padding: '6px 12px',
-          borderRadius: '16px',
+          padding: '5px 10px',
+          borderRadius: '14px',
           fontWeight: 600,
-          fontSize: '0.75rem',
+          fontSize: '0.7rem',
           letterSpacing: '0.025em',
           fontFamily: 'Inter, system-ui, sans-serif',
           display: 'flex',
@@ -193,9 +210,9 @@ const TopStatusBar: React.FC<{
           gap: '4px'
         }}>
           {status.label === 'CLEAR' ? (
-            <CheckIcon size={12} color={status.color} />
+            <CheckIcon size={11} color={status.color} />
           ) : (
-            <SnowflakeIcon size={12} color={status.color} />
+            <SnowflakeIcon size={11} color={status.color} />
           )}
           {status.label}
         </span>
@@ -205,8 +222,8 @@ const TopStatusBar: React.FC<{
           onClick={onRefresh}
           disabled={isRefreshing}
           style={{
-            width: '36px',
-            height: '36px',
+            width: '34px',
+            height: '34px',
             borderRadius: '50%',
             border: '1px solid #e5e7eb',
             backgroundColor: '#f9fafb',
@@ -218,7 +235,7 @@ const TopStatusBar: React.FC<{
           }}
           aria-label="Refresh data"
         >
-          <RefreshIcon size={18} color="#6b7280" />
+          <RefreshIcon size={16} color="#6b7280" />
         </button>
       </div>
     </div>
@@ -305,7 +322,322 @@ const PropertyListItem: React.FC<{
 );
 
 /**
- * Zone Detail Card - Shown when a zone is selected on map
+ * Chevron Right Icon
+ */
+const ChevronRightIcon: React.FC<{ size?: number; color?: string }> = ({ size = 16, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+);
+
+/**
+ * Zone Accordion List - Grouped by zone like desktop
+ */
+const ZoneAccordionList: React.FC<{
+  weatherData: Map<string, WeatherData>;
+  geoJsonData: any;
+  selectedPropertyId: string | null;
+  onSelectProperty: (property: ClientProperty) => void;
+  onSelectZone: (feature: any) => void;
+}> = ({ weatherData, geoJsonData, selectedPropertyId, onSelectProperty, onSelectZone }) => {
+  const [expandedZones, setExpandedZones] = useState<Set<string>>(new Set());
+  
+  // Group properties by zone
+  const zoneGroups = React.useMemo(() => {
+    const grouped = new Map<string, ClientProperty[]>();
+    CLIENT_PROPERTIES.forEach(prop => {
+      const existing = grouped.get(prop.zone) || [];
+      existing.push(prop);
+      grouped.set(prop.zone, existing);
+    });
+    
+    // Convert to array with status info
+    const result: Array<{
+      zoneName: string;
+      properties: ClientProperty[];
+      status: ReturnType<typeof getZoneStatus>;
+      zoneId: string | undefined;
+      feature: any;
+    }> = [];
+    
+    grouped.forEach((properties, zoneName) => {
+      const feature = geoJsonData?.features?.find((f: any) => f.properties.name === zoneName);
+      const zoneId = feature?.properties.id;
+      const data = zoneId ? weatherData.get(zoneId) : undefined;
+      const status = getZoneStatus(data);
+      result.push({ zoneName, properties, status, zoneId, feature });
+    });
+    
+    // Sort by status level (urgent first), then alphabetically
+    return result.sort((a, b) => {
+      if (b.status.level !== a.status.level) {
+        return b.status.level - a.status.level;
+      }
+      return a.zoneName.localeCompare(b.zoneName);
+    });
+  }, [weatherData, geoJsonData]);
+  
+  const toggleZone = (zoneName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedZones(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(zoneName)) {
+        newSet.delete(zoneName);
+      } else {
+        newSet.add(zoneName);
+      }
+      return newSet;
+    });
+  };
+  
+  return (
+    <div>
+      {zoneGroups.map(group => {
+        const isExpanded = expandedZones.has(group.zoneName);
+        const hasSelectedProperty = group.properties.some(p => p.id === selectedPropertyId);
+        
+        return (
+          <div key={group.zoneName}>
+            {/* Zone Header - Clickable */}
+            <button
+              onClick={(e) => toggleZone(group.zoneName, e)}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '14px 16px',
+                backgroundColor: hasSelectedProperty ? '#f0f9ff' : '#ffffff',
+                borderLeft: `4px solid ${group.status.color}`,
+                borderRight: 'none',
+                borderTop: 'none',
+                borderBottom: '1px solid #f3f4f6',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+                {/* Expand indicator */}
+                <span style={{
+                  transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  <ChevronRightIcon size={16} color="#9ca3af" />
+                </span>
+                
+                {/* Zone icon */}
+                <div style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '6px',
+                  backgroundColor: `${group.status.color}15`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <MapPinIcon size={14} color={group.status.color} />
+                </div>
+                
+                {/* Zone name and count */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                    color: '#111827',
+                    fontFamily: 'Inter, system-ui, sans-serif'
+                  }}>
+                    {group.zoneName}
+                  </div>
+                  <div style={{
+                    fontSize: '0.7rem',
+                    color: '#9ca3af',
+                    fontFamily: 'Inter, system-ui, sans-serif'
+                  }}>
+                    {group.properties.length} properties
+                  </div>
+                </div>
+              </div>
+              
+              {/* Snow amount & Status */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  color: '#6b7280',
+                  fontFamily: 'Inter, system-ui, sans-serif'
+                }}>
+                  {group.status.snow24h.toFixed(1)}cm
+                </span>
+                <span style={{
+                  backgroundColor: group.status.color,
+                  color: 'white',
+                  padding: '4px 10px',
+                  borderRadius: '4px',
+                  fontWeight: 600,
+                  fontSize: '0.65rem',
+                  fontFamily: 'Inter, system-ui, sans-serif'
+                }}>
+                  {group.status.label}
+                </span>
+                
+                {/* Info button - opens zone detail */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (group.feature) {
+                      onSelectZone(group.feature);
+                    }
+                  }}
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '6px',
+                    border: '1px solid #e5e7eb',
+                    backgroundColor: '#f9fafb',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer'
+                  }}
+                  aria-label="View zone details"
+                >
+                  <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                  </svg>
+                </button>
+              </div>
+            </button>
+            
+            {/* Expanded Properties */}
+            {isExpanded && (
+              <div style={{
+                backgroundColor: '#f9fafb',
+                borderBottom: '1px solid #f3f4f6'
+              }}>
+                {group.properties.map(property => {
+                  const isSelected = property.id === selectedPropertyId;
+                  return (
+                    <button
+                      key={property.id}
+                      onClick={() => onSelectProperty(property)}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '12px 16px 12px 52px',
+                        backgroundColor: isSelected ? '#dbeafe' : 'transparent',
+                        border: 'none',
+                        borderBottom: '1px solid #e5e7eb',
+                        cursor: 'pointer',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <span style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: group.status.color,
+                        flexShrink: 0
+                      }} />
+                      <span style={{
+                        fontSize: '0.85rem',
+                        color: '#374151',
+                        fontFamily: 'Inter, system-ui, sans-serif',
+                        flex: 1
+                      }}>
+                        {property.address}
+                      </span>
+                      <span style={{
+                        fontSize: '0.6rem',
+                        color: '#9ca3af',
+                        textTransform: 'uppercase',
+                        fontFamily: 'Inter, system-ui, sans-serif'
+                      }}>
+                        {property.type}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+/**
+ * Progress Bar Component - Like desktop
+ */
+const ProgressBar: React.FC<{
+  current: number;
+  threshold: number;
+  label: string;
+  color: string;
+}> = ({ current, threshold, label, color }) => {
+  const percentage = Math.min(100, (current / threshold) * 100);
+  const remaining = Math.max(0, threshold - current);
+  
+  return (
+    <div style={{ marginBottom: '12px' }}>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        marginBottom: '4px'
+      }}>
+        <span style={{ 
+          fontSize: '0.75rem', 
+          color: '#6b7280',
+          fontFamily: 'Inter, system-ui, sans-serif'
+        }}>
+          {label}
+        </span>
+        <span style={{ 
+          fontSize: '0.75rem', 
+          color: percentage >= 100 ? color : '#9ca3af',
+          fontWeight: 600,
+          fontFamily: 'Inter, system-ui, sans-serif'
+        }}>
+          {remaining > 0 ? `${remaining.toFixed(1)}cm to trigger` : 'TRIGGERED'}
+        </span>
+      </div>
+      <div style={{
+        height: '6px',
+        backgroundColor: '#e5e7eb',
+        borderRadius: '3px',
+        overflow: 'hidden'
+      }}>
+        <div style={{
+          height: '100%',
+          width: `${percentage}%`,
+          backgroundColor: color,
+          borderRadius: '3px',
+          transition: 'width 0.3s ease'
+        }} />
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Wind Icon
+ */
+const WindIcon: React.FC<{ size?: number; color?: string }> = ({ size = 16, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" />
+  </svg>
+);
+
+/**
+ * Zone Detail Card - Enhanced with Section A & B (Like Desktop)
  */
 const ZoneDetailCard: React.FC<{
   feature: any;
@@ -313,22 +645,56 @@ const ZoneDetailCard: React.FC<{
   onClose: () => void;
   propertiesInZone: ClientProperty[];
   onSelectProperty: (property: ClientProperty) => void;
+  forecast?: DetailedForecast | null;
 }> = ({ feature, weatherData, onClose, propertiesInZone, onSelectProperty }) => {
   const status = getZoneStatus(weatherData);
   
+  // Calculate snow removal data like desktop
+  const pastSnow24h = weatherData?.pastSnow24h || 0;
+  
+  // Calculate drift risk based on wind gusts (high wind + snow = drift risk)
+  const windGusts = weatherData?.windGusts || 0;
+  const driftRisk = Math.min(100, Math.round((windGusts / 50) * 100 * (pastSnow24h > 0.2 ? 1 : 0.3)));
+  
+  // Expected additional snow (next 24h - past 24h)
+  const expectedAdditional = Math.max(0, (weatherData?.snowAccumulation24h || 0) - pastSnow24h);
+  
+  // Thresholds
+  const residentialTrigger = 1.0;
+  const commercialTrigger = 5.0;
+  
+  // Decision context based on conditions
+  const getDecisionContext = () => {
+    if (pastSnow24h >= commercialTrigger) {
+      return { text: 'Commercial trigger exceeded. Full deployment required.', urgent: true };
+    }
+    if (pastSnow24h >= residentialTrigger) {
+      return { text: 'Residential trigger exceeded. Deploy residential crews.', urgent: true };
+    }
+    if (expectedAdditional >= 2) {
+      return { text: 'Significant snow incoming. Prepare crews for deployment.', urgent: false };
+    }
+    if (driftRisk > 50) {
+      return { text: 'High drift risk. Monitor for drifting even with low accumulation.', urgent: false };
+    }
+    return { text: 'Conditions clear. Monitor forecast for changes.', urgent: false };
+  };
+  
+  const decision = getDecisionContext();
+  
   return (
-    <div style={{ padding: '0 20px 20px 20px' }}>
+    <div style={{ padding: '0 16px 20px 16px' }}>
       {/* Zone header */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: '16px'
+        marginBottom: '12px'
       }}>
         <div>
           <h3 style={{ 
             margin: 0, 
-            fontSize: '1.1rem', 
+            fontSize: '1.05rem', 
             fontWeight: 700, 
             color: '#111827',
             fontFamily: 'Inter, system-ui, sans-serif'
@@ -336,11 +702,11 @@ const ZoneDetailCard: React.FC<{
             {feature.properties.name}
           </h3>
           <span style={{ 
-            fontSize: '0.8rem', 
+            fontSize: '0.75rem', 
             color: '#6b7280',
             fontFamily: 'Inter, system-ui, sans-serif'
           }}>
-            {propertiesInZone.length} properties in this zone
+            {propertiesInZone.length} properties
           </span>
         </div>
         <button
@@ -351,85 +717,267 @@ const ZoneDetailCard: React.FC<{
             borderRadius: '6px',
             backgroundColor: '#f9fafb',
             color: '#374151',
-            fontSize: '0.8rem',
+            fontSize: '0.75rem',
             fontWeight: 500,
             cursor: 'pointer',
-            fontFamily: 'Inter, system-ui, sans-serif'
+            fontFamily: 'Inter, system-ui, sans-serif',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
           }}
         >
-          View All
+          <MapPinIcon size={12} color="#6b7280" />
+          All Zones
         </button>
       </div>
       
-      {/* Status badge */}
+      {/* SECTION A: Ground Reality - Like Desktop */}
       <div style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '6px',
-        backgroundColor: `${status.color}15`,
-        color: status.color,
-        padding: '8px 14px',
-        borderRadius: '8px',
-        fontWeight: 600,
-        fontSize: '0.85rem',
-        marginBottom: '16px',
-        fontFamily: 'Inter, system-ui, sans-serif'
+        backgroundColor: '#f9fafb',
+        borderRadius: '12px',
+        padding: '14px',
+        marginBottom: '12px'
       }}>
-        {status.needsAction ? <AlertIcon size={14} color={status.color} /> : <CheckIcon size={14} color={status.color} />}
-        {status.label}
-      </div>
-      
-      {/* Stats grid */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: '1fr 1fr', 
-        gap: '12px',
-        marginBottom: '20px'
-      }}>
-        <div style={{ 
-          backgroundColor: '#f9fafb', 
-          padding: '14px', 
-          borderRadius: '10px',
-          textAlign: 'center' 
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '12px'
         }}>
-          <div style={{ 
-            fontSize: '1.5rem', 
-            fontWeight: 700, 
+          <span style={{
+            fontSize: '0.65rem',
+            fontWeight: 700,
+            color: '#6b7280',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            fontFamily: 'Inter, system-ui, sans-serif'
+          }}>
+            Ground Reality
+          </span>
+          <span style={{
+            fontSize: '0.65rem',
+            color: '#9ca3af',
+            fontFamily: 'Inter, system-ui, sans-serif'
+          }}>
+            Past 24 Hours
+          </span>
+        </div>
+        
+        {/* Big Snow Number */}
+        <div style={{ textAlign: 'center', marginBottom: '14px' }}>
+          <div style={{
+            fontSize: '2.5rem',
+            fontWeight: 800,
             color: status.color,
-            fontFamily: 'Inter, system-ui, sans-serif'
+            fontFamily: 'Inter, system-ui, sans-serif',
+            lineHeight: 1
           }}>
-            {status.snow24h.toFixed(1)}
+            {pastSnow24h.toFixed(1)}
           </div>
-          <div style={{ 
-            fontSize: '0.7rem', 
-            color: '#6b7280', 
-            marginTop: '2px',
+          <div style={{
+            fontSize: '0.75rem',
+            color: '#6b7280',
             fontFamily: 'Inter, system-ui, sans-serif'
           }}>
-            cm forecast
+            cm accumulated
           </div>
         </div>
-        <div style={{ 
-          backgroundColor: '#f9fafb', 
-          padding: '14px', 
-          borderRadius: '10px',
-          textAlign: 'center' 
+        
+        {/* Progress to Triggers */}
+        <ProgressBar 
+          current={pastSnow24h}
+          threshold={residentialTrigger}
+          label="Residential (1cm)"
+          color="#f59e0b"
+        />
+        <ProgressBar 
+          current={pastSnow24h}
+          threshold={commercialTrigger}
+          label="Commercial (5cm)"
+          color="#dc2626"
+        />
+        
+        {/* Status Badge */}
+        <div style={{
+          backgroundColor: `${status.color}15`,
+          border: `1px solid ${status.color}30`,
+          borderRadius: '8px',
+          padding: '10px 12px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
         }}>
-          <div style={{ 
-            fontSize: '1.5rem', 
-            fontWeight: 700, 
-            color: '#2563eb',
-            fontFamily: 'Inter, system-ui, sans-serif'
-          }}>
-            {status.pastSnow24h.toFixed(1)}
+          {status.needsAction ? <AlertIcon size={16} color={status.color} /> : <CheckIcon size={16} color={status.color} />}
+          <div>
+            <div style={{
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              color: status.color,
+              fontFamily: 'Inter, system-ui, sans-serif'
+            }}>
+              {status.label}
+            </div>
+            <div style={{
+              fontSize: '0.7rem',
+              color: '#6b7280',
+              fontFamily: 'Inter, system-ui, sans-serif'
+            }}>
+              {pastSnow24h < residentialTrigger 
+                ? `${(residentialTrigger - pastSnow24h).toFixed(1)}cm to Residential trigger`
+                : pastSnow24h < commercialTrigger 
+                  ? `${(commercialTrigger - pastSnow24h).toFixed(1)}cm to Commercial trigger`
+                  : 'All triggers exceeded'}
+            </div>
           </div>
-          <div style={{ 
-            fontSize: '0.7rem', 
-            color: '#6b7280', 
-            marginTop: '2px',
+        </div>
+      </div>
+      
+      {/* SECTION B: Forecast - Like Desktop */}
+      <div style={{
+        backgroundColor: '#f0f9ff',
+        borderRadius: '12px',
+        padding: '14px',
+        marginBottom: '12px'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '12px'
+        }}>
+          <span style={{
+            fontSize: '0.65rem',
+            fontWeight: 700,
+            color: '#3b82f6',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
             fontFamily: 'Inter, system-ui, sans-serif'
           }}>
-            cm fallen
+            The Forecast
+          </span>
+          <span style={{
+            fontSize: '0.65rem',
+            color: '#9ca3af',
+            fontFamily: 'Inter, system-ui, sans-serif'
+          }}>
+            Next 24 Hours
+          </span>
+        </div>
+        
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: '1fr 1fr', 
+          gap: '12px',
+          marginBottom: '12px'
+        }}>
+          {/* Expected Additional */}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              fontSize: '1.5rem',
+              fontWeight: 700,
+              color: expectedAdditional > 0 ? '#2563eb' : '#16a34a',
+              fontFamily: 'Inter, system-ui, sans-serif'
+            }}>
+              +{expectedAdditional.toFixed(1)}
+            </div>
+            <div style={{
+              fontSize: '0.65rem',
+              color: '#6b7280',
+              fontFamily: 'Inter, system-ui, sans-serif'
+            }}>
+              cm incoming
+            </div>
+          </div>
+          
+          {/* Drift Risk */}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              fontSize: '1.5rem',
+              fontWeight: 700,
+              color: driftRisk > 50 ? '#d97706' : '#16a34a',
+              fontFamily: 'Inter, system-ui, sans-serif',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px'
+            }}>
+              <WindIcon size={18} color={driftRisk > 50 ? '#d97706' : '#16a34a'} />
+              {driftRisk}
+            </div>
+            <div style={{
+              fontSize: '0.65rem',
+              color: '#6b7280',
+              fontFamily: 'Inter, system-ui, sans-serif'
+            }}>
+              Drift Risk
+            </div>
+          </div>
+        </div>
+        
+        {/* Snow Ends At - placeholder */}
+        {expectedAdditional > 0 && (
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '10px 12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <span style={{
+              fontSize: '0.75rem',
+              color: '#6b7280',
+              fontFamily: 'Inter, system-ui, sans-serif'
+            }}>
+              Snow Expected
+            </span>
+            <span style={{
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              color: '#111827',
+              fontFamily: 'Inter, system-ui, sans-serif'
+            }}>
+              Next 24h
+            </span>
+          </div>
+        )}
+      </div>
+      
+      {/* Decision Context - Like Desktop */}
+      <div style={{
+        backgroundColor: decision.urgent ? '#fef2f2' : '#f0fdf4',
+        border: `1px solid ${decision.urgent ? '#fecaca' : '#bbf7d0'}`,
+        borderRadius: '10px',
+        padding: '12px',
+        marginBottom: '16px'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '10px'
+        }}>
+          {decision.urgent ? (
+            <AlertIcon size={16} color="#dc2626" />
+          ) : (
+            <CheckIcon size={16} color="#16a34a" />
+          )}
+          <div>
+            <div style={{
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              color: decision.urgent ? '#991b1b' : '#166534',
+              marginBottom: '2px',
+              fontFamily: 'Inter, system-ui, sans-serif'
+            }}>
+              Decision Context
+            </div>
+            <div style={{
+              fontSize: '0.8rem',
+              color: decision.urgent ? '#991b1b' : '#166534',
+              fontFamily: 'Inter, system-ui, sans-serif'
+            }}>
+              {decision.text}
+            </div>
           </div>
         </div>
       </div>
@@ -438,13 +986,13 @@ const ZoneDetailCard: React.FC<{
       {propertiesInZone.length > 0 && (
         <div>
           <div style={{ 
-            fontSize: '0.8rem', 
+            fontSize: '0.75rem', 
             fontWeight: 600, 
             color: '#374151',
-            marginBottom: '10px',
+            marginBottom: '8px',
             fontFamily: 'Inter, system-ui, sans-serif'
           }}>
-            Properties
+            Properties in Zone
           </div>
           {propertiesInZone.map(property => (
             <button
@@ -460,13 +1008,13 @@ const ZoneDetailCard: React.FC<{
                 border: 'none',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                marginBottom: '8px',
+                marginBottom: '6px',
                 textAlign: 'left'
               }}
             >
-              <MapPinIcon size={14} color="#6b7280" />
+              <MapPinIcon size={14} color={status.color} />
               <span style={{ 
-                fontSize: '0.85rem', 
+                fontSize: '0.8rem', 
                 color: '#374151',
                 fontFamily: 'Inter, system-ui, sans-serif'
               }}>
@@ -1019,6 +1567,7 @@ const BottomSheet: React.FC<{
   geoJsonData: any;
   selectedPropertyId: string | null;
   onSelectProperty: (property: ClientProperty) => void;
+  onSelectZone: (feature: any) => void;
   selectedFeature: any;
   onClearSelection: () => void;
   viewMode: ViewMode;
@@ -1030,7 +1579,8 @@ const BottomSheet: React.FC<{
   weatherData, 
   geoJsonData, 
   selectedPropertyId, 
-  onSelectProperty, 
+  onSelectProperty,
+  onSelectZone,
   selectedFeature,
   onClearSelection,
   viewMode,
@@ -1290,25 +1840,24 @@ const BottomSheet: React.FC<{
         ) : forecastView === '7day' ? (
           <SevenDayForecastView forecast={forecast} />
         ) : viewMode === 'zone-detail' && selectedFeature ? (
-          /* Zone Detail View */
+          /* Zone Detail View - Enhanced with Section A & B */
           <ZoneDetailCard
             feature={selectedFeature}
             weatherData={weatherData.get(selectedFeature.properties.id)}
             onClose={handleClearAndShowAll}
             propertiesInZone={propertiesInZone}
             onSelectProperty={onSelectProperty}
+            forecast={forecast}
           />
         ) : (
-          /* Property List View - "Live Now" */
-          sortedProperties.map(property => (
-            <PropertyListItem
-              key={property.id}
-              property={property}
-              status={getPropertyStatus(property)}
-              isSelected={property.id === selectedPropertyId}
-              onSelect={() => onSelectProperty(property)}
-            />
-          ))
+          /* Zone Accordion List - Grouped by zone like desktop */
+          <ZoneAccordionList
+            weatherData={weatherData}
+            geoJsonData={geoJsonData}
+            selectedPropertyId={selectedPropertyId}
+            onSelectProperty={onSelectProperty}
+            onSelectZone={onSelectZone}
+          />
         )}
       </div>
     </div>
@@ -1321,13 +1870,14 @@ const BottomSheet: React.FC<{
 const MobileDriverMode: React.FC<MobileDriverModeProps> = ({
   temperature,
   snowAccumulation,
+  avgSnow = 0,
   weatherData,
   geoJsonData,
   selectedPropertyId,
   onSelectProperty,
   onRefresh,
   selectedZoneId: _selectedZoneId,
-  onSelectZone: _onSelectZone,
+  onSelectZone,
   selectedFeature,
   forecast,
   ecForecast
@@ -1349,20 +1899,22 @@ const MobileDriverMode: React.FC<MobileDriverModeProps> = ({
   
   return (
     <>
-      {/* Professional Top Status Bar */}
+      {/* Professional Top Status Bar - Enhanced with Max Impact */}
       <TopStatusBar
         temperature={temperature}
         snowAccumulation={snowAccumulation}
+        avgSnow={avgSnow}
         onRefresh={handleRefresh}
         isRefreshing={isRefreshing}
       />
       
-      {/* Bottom Sheet */}
+      {/* Bottom Sheet - Now with zone accordion list */}
       <BottomSheet
         weatherData={weatherData}
         geoJsonData={geoJsonData}
         selectedPropertyId={selectedPropertyId}
         onSelectProperty={onSelectProperty}
+        onSelectZone={onSelectZone}
         selectedFeature={selectedFeature}
         onClearSelection={handleClearSelection}
         viewMode={viewMode}
