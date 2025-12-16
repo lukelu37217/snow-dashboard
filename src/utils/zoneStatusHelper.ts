@@ -35,9 +35,14 @@ const COLORS = {
 /**
  * Get zone status from weather data
  * This is the SINGLE source of truth for status calculation
+ * 
+ * IMPORTANT: Uses PAST 24h snow (pastSnow24h) for status determination
+ * This is what matters for snow removal dispatch decisions - what has 
+ * actually fallen, not what is forecast.
  */
 export function getZoneStatus(data: WeatherData | undefined): ZoneStatus {
-    const snow24h = data?.snowAccumulation24h || 0;
+    // Use PAST 24h snow for status - this is what determines dispatch needs
+    const snow24h = data?.pastSnow24h || 0;
     const pastSnow24h = data?.pastSnow24h || 0;
     
     // Level 3: Commercial (>= 5 cm)

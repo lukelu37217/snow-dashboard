@@ -472,9 +472,10 @@ const getColor = (data: WeatherData | undefined) => {
 };
 
 // Get threshold level for labeling logic - Now uses zoneStatusHelper
+// Uses pastSnow24h for consistency (what has actually fallen)
 const getSnowLevel = (snow24h: number): 0 | 1 | 2 | 3 => {
-    // Create mock data to use the unified helper
-    const mockData = { snowAccumulation24h: snow24h } as WeatherData;
+    // Create mock data to use the unified helper (using pastSnow24h)
+    const mockData = { pastSnow24h: snow24h } as WeatherData;
     return getZoneLevel(mockData);
 };
 
@@ -682,8 +683,9 @@ const DistrictLayer: React.FC<{
 
             // TIER 1: SERVICE ZONES - Full interaction and labels
             // Labels based on 4-level snow threshold system
-            if (layer instanceof L.Polygon && data && data.snowAccumulation24h !== undefined) {
-                const snow24h = data.snowAccumulation24h;
+            // Use PAST 24h snow for labels (what has actually fallen for dispatch decisions)
+            if (layer instanceof L.Polygon && data && data.pastSnow24h !== undefined) {
+                const snow24h = data.pastSnow24h;
                 const level = getSnowLevel(snow24h);
                 
                 if (level === 2) {

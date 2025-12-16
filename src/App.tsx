@@ -242,7 +242,8 @@ function App() {
     return weatherMap.get(selectedFeature.properties.id);
   }
 
-  const allSnow = Array.from(weatherMap.values()).map(d => d.snowAccumulation24h);
+  // Use PAST 24h snow for metrics (what has actually fallen - for dispatch decisions)
+  const allSnow = Array.from(weatherMap.values()).map(d => d.pastSnow24h);
   const maxSnow = allSnow.length ? Math.max(...allSnow) : 0;
   const avgSnow = allSnow.length ? allSnow.reduce((a, b) => a + b, 0) / allSnow.length : 0;
 

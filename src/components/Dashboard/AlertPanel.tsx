@@ -16,10 +16,10 @@ const AlertPanel: React.FC<AlertPanelProps> = ({ urgentCommunities, onSelect, to
     const highPriority = urgentCommunities.filter(c => c.data.snowRemoval?.priority === 'high');
     const mediumPriority = urgentCommunities.filter(c => c.data.snowRemoval?.priority === 'medium');
 
-    // Calculate summary stats
+    // Calculate summary stats - use PAST 24h for dispatch decisions
     const totalUrgent = urgentCommunities.length;
     const maxSnow = urgentCommunities.length > 0
-        ? Math.max(...urgentCommunities.map(c => c.data.snowAccumulation24h || 0))
+        ? Math.max(...urgentCommunities.map(c => c.data.pastSnow24h || 0))
         : 0;
 
     // City-Wide Snapshot calculations

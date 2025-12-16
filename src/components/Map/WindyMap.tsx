@@ -198,8 +198,9 @@ const WindyMap: React.FC<WindyMapProps> = ({
             const id = feature.properties.id;
             const data = weatherData.get(id);
 
-            const snowfallLabel = data?.snowAccumulation24h
-                ? `${data.snowAccumulation24h.toFixed(1)}cm`
+            // Use PAST 24h for labels (what has actually fallen)
+            const snowfallLabel = data?.pastSnow24h
+                ? `${data.pastSnow24h.toFixed(1)}cm`
                 : '?';
 
             if (layer instanceof L.Polygon && data) {
