@@ -1636,6 +1636,8 @@ const BottomSheet: React.FC<{
   
   const isDragging = useRef(false);
   const lastMoveTime = useRef(0);
+  const startScrollTop = useRef(0);
+  const hasMoved = useRef(false);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     const target = e.target as HTMLElement;
@@ -1646,7 +1648,7 @@ const BottomSheet: React.FC<{
       return;
     }
 
-    // IMPROVED: Allow drag from handle area OR from content area when at scroll top
+    // Allow drag from handle area OR from content area
     const isFromHandle = target.closest('.drag-handle-area');
     const contentArea = document.querySelector('.bottom-sheet-content') as HTMLDivElement;
     const isFromContent = target.closest('.bottom-sheet-content');
@@ -1656,17 +1658,13 @@ const BottomSheet: React.FC<{
       return;
     }
 
-    // If from content area, only allow drag when scrolled to top (for pull-down gesture)
-    if (isFromContent && contentArea) {
-      const scrollTop = contentArea.scrollTop;
-      // Only enable drag if at the very top and dragging down
-      if (scrollTop > 5) {
-        isDragging.current = false;
-        return;
-      }
+    // Store initial scroll position
+    if (contentArea) {
+      startScrollTop.current = contentArea.scrollTop;
     }
 
     isDragging.current = true;
+    hasMoved.current = false;
     dragStartY.current = e.touches[0].clientY;
     dragStartHeight.current = currentHeight;
     lastMoveTime.current = Date.now();
@@ -1686,18 +1684,37 @@ const BottomSheet: React.FC<{
     const deltaY = dragStartY.current - currentY;
     const contentArea = document.querySelector('.bottom-sheet-content') as HTMLDivElement;
 
-    // IMPROVED: Smart scroll vs drag detection
-    // If user is at scroll top and dragging down (deltaY < 0), allow sheet drag
-    // If user is scrolling content up (deltaY > 0 and has scroll), prioritize content scroll
-    if (contentArea && contentArea.scrollTop > 5 && deltaY > 0) {
-      // User is scrolling content, not dragging sheet
-      isDragging.current = false;
-      return;
+    // Mark that we've moved
+    if (!hasMoved.current && Math.abs(deltaY) > 3) {
+      hasMoved.current = true;
     }
 
-    // Prevent default to enable sheet dragging
-    e.preventDefault();
-    e.stopPropagation();
+    // Smart detection: Determine if this is content scroll or sheet drag
+    if (contentArea) {
+      const currentScrollTop = contentArea.scrollTop;
+      const scrollDelta = currentScrollTop - startScrollTop.current;
+
+      // If content has actually scrolled, prioritize content scrolling
+      if (Math.abs(scrollDelta) > 5) {
+        isDragging.current = false;
+        return;
+      }
+
+      // If user is not at top and trying to scroll up, allow content scroll
+      if (currentScrollTop > 10 && deltaY > 0) {
+        isDragging.current = false;
+        return;
+      }
+
+      // If at top and dragging down, OR anywhere and dragging up: drag the sheet
+      // Prevent default to enable sheet dragging
+      e.preventDefault();
+      e.stopPropagation();
+    } else {
+      // No content area, just drag
+      e.preventDefault();
+      e.stopPropagation();
+    }
 
     const deltaPercent = (deltaY / window.innerHeight) * 100;
     const newHeight = Math.max(15, Math.min(90, dragStartHeight.current + deltaPercent));
@@ -1718,60 +1735,67 @@ const BottomSheet: React.FC<{
     if (!isDragging.current) {
       return;
     }
-    
+
     isDragging.current = false;
-    
+
     if (!sheetRef.current) {
       return;
     }
-    
+
+    // If we didn't actually move, don't snap
+    if (!hasMoved.current) {
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+      }
+      return;
+    }
+
     const finalY = e.changedTouches[0].clientY;
     const deltaY = dragStartY.current - finalY;
     const currentPercent = parseFloat(sheetRef.current.style.height) || dragStartHeight.current;
-    
+
     // Determine target state - use both drag distance and final position
     let targetState: 'collapsed' | 'half' | 'expanded';
-    
+
     // Priority: drag distance > final position
-    if (Math.abs(deltaY) > 40) {
+    if (Math.abs(deltaY) > 50) {
       // Significant drag - follow direction
       if (deltaY > 0) {
         // Dragged up
-        targetState = currentPercent > 55 ? 'expanded' : 'half';
+        targetState = currentPercent > 50 ? 'expanded' : 'half';
       } else {
         // Dragged down
-        targetState = currentPercent < 40 ? 'collapsed' : 'half';
+        targetState = currentPercent < 45 ? 'collapsed' : 'half';
       }
     } else if (Math.abs(deltaY) > 20) {
       // Medium drag - still follow direction but be more conservative
       if (deltaY > 0) {
-        targetState = currentPercent > 65 ? 'expanded' : 'half';
+        targetState = currentPercent > 60 ? 'expanded' : 'half';
       } else {
-        targetState = currentPercent < 30 ? 'collapsed' : 'half';
+        targetState = currentPercent < 35 ? 'collapsed' : 'half';
       }
     } else {
-      // Small movement - snap to nearest state based on position
+      // Small movement - snap to nearest state based on current position
       if (currentPercent < 30) {
         targetState = 'collapsed';
-      } else if (currentPercent > 70) {
+      } else if (currentPercent > 65) {
         targetState = 'expanded';
       } else {
         targetState = 'half';
       }
     }
-    
+
     // Update state
     setSheetHeight(targetState);
-    
+
     // Re-enable transition and sync with state
-    // Use setTimeout to ensure state update happens first
     const targetHeight = heights[targetState];
     setTimeout(() => {
       if (sheetRef.current) {
         sheetRef.current.style.transition = 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
         // Clear inline style to let CSS handle transition
         sheetRef.current.style.height = '';
-        
+
         // Ensure map padding matches
         const mapContainer = document.querySelector('.leaflet-container')?.parentElement as HTMLElement;
         if (mapContainer) {
