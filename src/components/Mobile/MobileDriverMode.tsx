@@ -1684,34 +1684,21 @@ const BottomSheet: React.FC<{
         overflow: 'hidden',
       }}
     >
-      {/* Header - No drag handle, just visual indicator */}
+      {/* Header - Clean header without drag indicators */}
       <div
         className="sheet-header"
         style={{
-          padding: '12px 0 8px 0',
+          padding: '16px 20px 12px 20px',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
           backgroundColor: '#ffffff',
           borderTopLeftRadius: '16px',
           borderTopRightRadius: '16px',
           borderBottom: '1px solid #f3f4f6',
           position: 'relative',
           zIndex: 10,
-          minHeight: '80px'
         }}
       >
-        {/* Visual indicator line (not draggable) */}
-        <div
-          style={{
-            width: '36px',
-            height: '4px',
-            backgroundColor: '#d1d5db',
-            borderRadius: '2px',
-            marginBottom: '12px',
-          }}
-        />
-        
         {/* Header content */}
         <div
           style={{
@@ -1719,7 +1706,6 @@ const BottomSheet: React.FC<{
             alignItems: 'center',
             justifyContent: 'space-between',
             width: '100%',
-            padding: '0 20px',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1813,11 +1799,37 @@ const BottomSheet: React.FC<{
       </div>
       
       {/* Segmented Control - "Future Sight" */}
-      <ForecastSegmentedControl 
-        selectedView={forecastView} 
-        onViewChange={setForecastView} 
+      <ForecastSegmentedControl
+        selectedView={forecastView}
+        onViewChange={setForecastView}
       />
-      
+
+      {/* Scroll hint - Only show in list view with live data */}
+      {forecastView === 'live' && viewMode === 'overview' && sortedProperties.length > 3 && (
+        <div
+          style={{
+            padding: '8px 20px',
+            backgroundColor: '#f9fafb',
+            borderBottom: '1px solid #e5e7eb',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            fontSize: '0.75rem',
+            color: '#6b7280',
+            fontFamily: 'Inter, system-ui, sans-serif',
+          }}
+        >
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+          <span>Scroll to see all {sortedProperties.length} properties</span>
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </div>
+      )}
+
       {/* Content area - Pure scrolling, no drag conflicts */}
       <div
         className="bottom-sheet-content"
