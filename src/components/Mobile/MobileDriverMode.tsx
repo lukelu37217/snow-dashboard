@@ -1636,22 +1636,34 @@ const BottomSheet: React.FC<{
   
   const isDragging = useRef(false);
   const lastMoveTime = useRef(0);
-  
+
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     const target = e.target as HTMLElement;
 
-    // Don't start drag if:
-    // 1. Clicking on interactive elements
-    // 2. Starting touch on scrollable content area (not the handle)
+    // Don't start drag if clicking on interactive elements
     if (target.closest('button, a, input, [role="button"]')) {
       isDragging.current = false;
       return;
     }
 
-    // Only allow drag from the handle area
-    if (!target.closest('.drag-handle-area')) {
+    // IMPROVED: Allow drag from handle area OR from content area when at scroll top
+    const isFromHandle = target.closest('.drag-handle-area');
+    const contentArea = document.querySelector('.bottom-sheet-content') as HTMLDivElement;
+    const isFromContent = target.closest('.bottom-sheet-content');
+
+    if (!isFromHandle && !isFromContent) {
       isDragging.current = false;
       return;
+    }
+
+    // If from content area, only allow drag when scrolled to top (for pull-down gesture)
+    if (isFromContent && contentArea) {
+      const scrollTop = contentArea.scrollTop;
+      // Only enable drag if at the very top and dragging down
+      if (scrollTop > 5) {
+        isDragging.current = false;
+        return;
+      }
     }
 
     isDragging.current = true;
@@ -1670,16 +1682,23 @@ const BottomSheet: React.FC<{
       return;
     }
 
-    // CRITICAL FIX: Only prevent default when actually dragging from handle
-    // This allows content scrolling to work properly
-    const target = e.target as HTMLElement;
-    if (target.closest('.drag-handle-area')) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-
     const currentY = e.touches[0].clientY;
     const deltaY = dragStartY.current - currentY;
+    const contentArea = document.querySelector('.bottom-sheet-content') as HTMLDivElement;
+
+    // IMPROVED: Smart scroll vs drag detection
+    // If user is at scroll top and dragging down (deltaY < 0), allow sheet drag
+    // If user is scrolling content up (deltaY > 0 and has scroll), prioritize content scroll
+    if (contentArea && contentArea.scrollTop > 5 && deltaY > 0) {
+      // User is scrolling content, not dragging sheet
+      isDragging.current = false;
+      return;
+    }
+
+    // Prevent default to enable sheet dragging
+    e.preventDefault();
+    e.stopPropagation();
+
     const deltaPercent = (deltaY / window.innerHeight) * 100;
     const newHeight = Math.max(15, Math.min(90, dragStartHeight.current + deltaPercent));
 
@@ -1962,7 +1981,7 @@ const BottomSheet: React.FC<{
         onViewChange={setForecastView} 
       />
       
-      {/* Content area - Scrollable but doesn't interfere with drag */}
+      {/* Content area - Smart scrolling with pull-to-resize */}
       <div
         className="bottom-sheet-content"
         style={{
@@ -1971,15 +1990,6 @@ const BottomSheet: React.FC<{
           overflowX: 'hidden',
           WebkitOverflowScrolling: 'touch',
           touchAction: 'pan-y', // Allow vertical scrolling
-        }}
-        onTouchStart={(e) => {
-          // If user starts scrolling in content area, don't trigger drag
-          const target = e.target as HTMLElement;
-          if (target.closest('.drag-handle-area')) {
-            return; // Let drag handle handle it
-          }
-          // Content area scrolling - disable drag
-          isDragging.current = false;
         }}
       >
         {/* Forecast Views */}
