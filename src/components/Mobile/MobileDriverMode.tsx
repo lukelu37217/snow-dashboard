@@ -84,21 +84,22 @@ interface MobileDriverModeProps {
   avgSnow?: number; // Average snow across zones
   isSnowing: boolean;
   lastUpdated: string;
-  
+
   // Property data
   weatherData: Map<string, WeatherData>;
   geoJsonData: any;
-  
+
   // Selection handlers
   selectedPropertyId: string | null;
   onSelectProperty: (property: ClientProperty) => void;
   onRefresh: () => void;
-  
+
   // Zone selection
   selectedZoneId: string | null;
   onSelectZone: (feature: any) => void;
   selectedFeature: any;
-  
+  onClearSelection: () => void; // NEW: Properly clear selection in parent
+
   // NEW: Forecast data for "Future Sight"
   forecast?: DetailedForecast | null;
   ecForecast?: ECForecastData | null;
@@ -1638,17 +1639,26 @@ const BottomSheet: React.FC<{
   
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     const target = e.target as HTMLElement;
-    // Don't start drag if clicking on interactive elements
+
+    // Don't start drag if:
+    // 1. Clicking on interactive elements
+    // 2. Starting touch on scrollable content area (not the handle)
     if (target.closest('button, a, input, [role="button"]')) {
       isDragging.current = false;
       return;
     }
-    
+
+    // Only allow drag from the handle area
+    if (!target.closest('.drag-handle-area')) {
+      isDragging.current = false;
+      return;
+    }
+
     isDragging.current = true;
     dragStartY.current = e.touches[0].clientY;
     dragStartHeight.current = currentHeight;
     lastMoveTime.current = Date.now();
-    
+
     // Disable transition during drag
     if (sheetRef.current) {
       sheetRef.current.style.transition = 'none';
@@ -1659,24 +1669,29 @@ const BottomSheet: React.FC<{
     if (!isDragging.current || !sheetRef.current) {
       return;
     }
-    
-    e.preventDefault();
-    e.stopPropagation();
-    
+
+    // CRITICAL FIX: Only prevent default when actually dragging from handle
+    // This allows content scrolling to work properly
+    const target = e.target as HTMLElement;
+    if (target.closest('.drag-handle-area')) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     const currentY = e.touches[0].clientY;
     const deltaY = dragStartY.current - currentY;
     const deltaPercent = (deltaY / window.innerHeight) * 100;
     const newHeight = Math.max(15, Math.min(90, dragStartHeight.current + deltaPercent));
-    
+
     // Update height immediately for smooth drag
     sheetRef.current.style.height = `${newHeight}vh`;
-    
+
     // Update map padding in real-time
     const mapContainer = document.querySelector('.leaflet-container')?.parentElement as HTMLElement;
     if (mapContainer) {
       mapContainer.style.paddingBottom = `${newHeight}vh`;
     }
-    
+
     lastMoveTime.current = Date.now();
   }, []);
   
@@ -1906,9 +1921,15 @@ const BottomSheet: React.FC<{
             </span>
           </div>
           
-          {/* Map button - collapses sheet to show map */}
+          {/* Map button - collapses sheet and clears selection to show full map */}
           <button
-            onClick={() => setSheetHeight('collapsed')}
+            onClick={() => {
+              setSheetHeight('collapsed');
+              // If zone is selected, also clear it to show full map
+              if (viewMode === 'zone-detail' || selectedFeature) {
+                handleClearAndShowAll();
+              }
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -1916,8 +1937,8 @@ const BottomSheet: React.FC<{
               padding: '8px 14px',
               border: '1px solid #e5e7eb',
               borderRadius: '8px',
-              backgroundColor: sheetHeight === 'collapsed' ? '#f0fdf4' : '#f9fafb',
-              color: sheetHeight === 'collapsed' ? '#16a34a' : '#374151',
+              backgroundColor: sheetHeight === 'collapsed' && viewMode === 'overview' ? '#f0fdf4' : '#f9fafb',
+              color: sheetHeight === 'collapsed' && viewMode === 'overview' ? '#16a34a' : '#374151',
               fontSize: '0.8rem',
               fontWeight: 600,
               cursor: 'pointer',
@@ -1942,10 +1963,12 @@ const BottomSheet: React.FC<{
       />
       
       {/* Content area - Scrollable but doesn't interfere with drag */}
-      <div 
+      <div
+        className="bottom-sheet-content"
         style={{
           flex: 1,
           overflowY: 'auto',
+          overflowX: 'hidden',
           WebkitOverflowScrolling: 'touch',
           touchAction: 'pan-y', // Allow vertical scrolling
         }}
@@ -2005,21 +2028,22 @@ const MobileDriverMode: React.FC<MobileDriverModeProps> = ({
   selectedZoneId: _selectedZoneId,
   onSelectZone,
   selectedFeature,
+  onClearSelection,
   forecast,
   ecForecast
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await onRefresh();
     setTimeout(() => setIsRefreshing(false), 1000);
   };
-  
+
   const handleClearSelection = () => {
-    // This should trigger App.tsx to clear selectedFeature
-    // For now, just reset view mode
+    // FIXED: Properly clear parent state
+    onClearSelection();
     setViewMode('overview');
   };
   

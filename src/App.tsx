@@ -343,6 +343,7 @@ function App() {
           selectedZoneId={selectedZoneId}
           onSelectZone={handleSelect}
           selectedFeature={selectedFeature}
+          onClearSelection={handleCloseDetail}
           forecast={cityWeather?.forecast || null}
           ecForecast={ecForecast}
         />
