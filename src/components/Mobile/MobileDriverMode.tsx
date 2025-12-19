@@ -1603,10 +1603,10 @@ const BottomSheet: React.FC<{
   const dragStartY = useRef<number>(0);
   const dragStartHeight = useRef<number>(0);
   
-  // Auto-expand when zone is selected
+  // Auto-expand to full screen when zone is selected (focus on details, not map)
   useEffect(() => {
     if (selectedFeature) {
-      setSheetHeight('half');
+      setSheetHeight('expanded'); // Show full details
       setViewMode('zone-detail');
     }
   }, [selectedFeature, setViewMode]);
@@ -1614,7 +1614,7 @@ const BottomSheet: React.FC<{
   // Auto-expand sheet when switching to forecast views
   useEffect(() => {
     if (forecastView !== 'live' && sheetHeight === 'collapsed') {
-      setSheetHeight('half');
+      setSheetHeight('expanded'); // Show full forecast
     }
   }, [forecastView, sheetHeight]);
   
@@ -1636,7 +1636,6 @@ const BottomSheet: React.FC<{
   
   const isDragging = useRef(false);
   const lastMoveTime = useRef(0);
-  const startScrollTop = useRef(0);
   const hasMoved = useRef(false);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -1648,19 +1647,13 @@ const BottomSheet: React.FC<{
       return;
     }
 
-    // Allow drag from handle area OR from content area
+    // SIMPLIFIED: Only allow drag from handle area
+    // Content area should just scroll, not drag the sheet
     const isFromHandle = target.closest('.drag-handle-area');
-    const contentArea = document.querySelector('.bottom-sheet-content') as HTMLDivElement;
-    const isFromContent = target.closest('.bottom-sheet-content');
 
-    if (!isFromHandle && !isFromContent) {
+    if (!isFromHandle) {
       isDragging.current = false;
       return;
-    }
-
-    // Store initial scroll position
-    if (contentArea) {
-      startScrollTop.current = contentArea.scrollTop;
     }
 
     isDragging.current = true;
@@ -1682,39 +1675,15 @@ const BottomSheet: React.FC<{
 
     const currentY = e.touches[0].clientY;
     const deltaY = dragStartY.current - currentY;
-    const contentArea = document.querySelector('.bottom-sheet-content') as HTMLDivElement;
 
     // Mark that we've moved
     if (!hasMoved.current && Math.abs(deltaY) > 3) {
       hasMoved.current = true;
     }
 
-    // Smart detection: Determine if this is content scroll or sheet drag
-    if (contentArea) {
-      const currentScrollTop = contentArea.scrollTop;
-      const scrollDelta = currentScrollTop - startScrollTop.current;
-
-      // If content has actually scrolled, prioritize content scrolling
-      if (Math.abs(scrollDelta) > 5) {
-        isDragging.current = false;
-        return;
-      }
-
-      // If user is not at top and trying to scroll up, allow content scroll
-      if (currentScrollTop > 10 && deltaY > 0) {
-        isDragging.current = false;
-        return;
-      }
-
-      // If at top and dragging down, OR anywhere and dragging up: drag the sheet
-      // Prevent default to enable sheet dragging
-      e.preventDefault();
-      e.stopPropagation();
-    } else {
-      // No content area, just drag
-      e.preventDefault();
-      e.stopPropagation();
-    }
+    // SIMPLIFIED: Since we only drag from handle, always prevent default
+    e.preventDefault();
+    e.stopPropagation();
 
     const deltaPercent = (deltaY / window.innerHeight) * 100;
     const newHeight = Math.max(15, Math.min(90, dragStartHeight.current + deltaPercent));
@@ -1832,7 +1801,8 @@ const BottomSheet: React.FC<{
   const handleClearAndShowAll = () => {
     onClearSelection();
     setViewMode('overview');
-    setSheetHeight('half');
+    setSheetHeight('half'); // Return to list view
+    setForecastView('live'); // Reset to live view
   };
   
   return (
