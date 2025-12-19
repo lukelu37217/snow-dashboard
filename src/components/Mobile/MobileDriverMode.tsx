@@ -10,7 +10,7 @@
  * - NEW: Time/Forecast Selector (Live Now | Next 24h | 7-Day)
  */
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { WeatherData, DetailedForecast } from '../../services/weatherService';
 import type { ClientProperty } from '../../config/clientProperties';
 import type { ECForecastData } from '../../services/weatherCanadaService';
@@ -1595,37 +1595,36 @@ const BottomSheet: React.FC<{
   forecast,
   ecForecast
 }) => {
-  const [sheetHeight, setSheetHeight] = useState<'collapsed' | 'half' | 'expanded'>(
-    selectedFeature ? 'half' : 'collapsed'
+  const [sheetHeight, setSheetHeight] = useState<'collapsed' | 'list' | 'detail'>(
+    'list' // Start with list view
   );
   const [forecastView, setForecastView] = useState<ForecastView>('live');
   const sheetRef = useRef<HTMLDivElement>(null);
-  const dragStartY = useRef<number>(0);
-  const dragStartHeight = useRef<number>(0);
-  
-  // Auto-expand to full screen when zone is selected (focus on details, not map)
+
+  // Auto-expand to detail view when zone is selected
   useEffect(() => {
     if (selectedFeature) {
-      setSheetHeight('expanded'); // Show full details
+      setSheetHeight('detail'); // Show full details
       setViewMode('zone-detail');
     }
   }, [selectedFeature, setViewMode]);
-  
-  // Auto-expand sheet when switching to forecast views
+
+  // Auto-expand when switching to forecast views
   useEffect(() => {
     if (forecastView !== 'live' && sheetHeight === 'collapsed') {
-      setSheetHeight('expanded'); // Show full forecast
+      setSheetHeight('detail'); // Show full forecast
     }
   }, [forecastView, sheetHeight]);
-  
+
+  // Fixed heights - no dragging needed
   const heights = {
-    collapsed: 20,
-    half: 40,
-    expanded: 85
+    collapsed: 20,  // Just see map
+    list: 50,       // List view with map visible
+    detail: 90      // Full detail view
   } as const;
-  
+
   const currentHeight = heights[sheetHeight];
-  
+
   // Update map padding when sheet height changes
   useEffect(() => {
     const mapContainer = document.querySelector('.leaflet-container')?.parentElement as HTMLElement;
@@ -1633,146 +1632,6 @@ const BottomSheet: React.FC<{
       mapContainer.style.paddingBottom = `${currentHeight}vh`;
     }
   }, [currentHeight]);
-  
-  const isDragging = useRef(false);
-  const lastMoveTime = useRef(0);
-  const hasMoved = useRef(false);
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    const target = e.target as HTMLElement;
-
-    // Don't start drag if clicking on interactive elements
-    if (target.closest('button, a, input, [role="button"]')) {
-      isDragging.current = false;
-      return;
-    }
-
-    // SIMPLIFIED: Only allow drag from handle area
-    // Content area should just scroll, not drag the sheet
-    const isFromHandle = target.closest('.drag-handle-area');
-
-    if (!isFromHandle) {
-      isDragging.current = false;
-      return;
-    }
-
-    isDragging.current = true;
-    hasMoved.current = false;
-    dragStartY.current = e.touches[0].clientY;
-    dragStartHeight.current = currentHeight;
-    lastMoveTime.current = Date.now();
-
-    // Disable transition during drag
-    if (sheetRef.current) {
-      sheetRef.current.style.transition = 'none';
-    }
-  }, [currentHeight]);
-  
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isDragging.current || !sheetRef.current) {
-      return;
-    }
-
-    const currentY = e.touches[0].clientY;
-    const deltaY = dragStartY.current - currentY;
-
-    // Mark that we've moved
-    if (!hasMoved.current && Math.abs(deltaY) > 3) {
-      hasMoved.current = true;
-    }
-
-    // SIMPLIFIED: Since we only drag from handle, always prevent default
-    e.preventDefault();
-    e.stopPropagation();
-
-    const deltaPercent = (deltaY / window.innerHeight) * 100;
-    const newHeight = Math.max(15, Math.min(90, dragStartHeight.current + deltaPercent));
-
-    // Update height immediately for smooth drag
-    sheetRef.current.style.height = `${newHeight}vh`;
-
-    // Update map padding in real-time
-    const mapContainer = document.querySelector('.leaflet-container')?.parentElement as HTMLElement;
-    if (mapContainer) {
-      mapContainer.style.paddingBottom = `${newHeight}vh`;
-    }
-
-    lastMoveTime.current = Date.now();
-  }, []);
-  
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (!isDragging.current) {
-      return;
-    }
-
-    isDragging.current = false;
-
-    if (!sheetRef.current) {
-      return;
-    }
-
-    // If we didn't actually move, don't snap
-    if (!hasMoved.current) {
-      if (sheetRef.current) {
-        sheetRef.current.style.transition = 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-      }
-      return;
-    }
-
-    const finalY = e.changedTouches[0].clientY;
-    const deltaY = dragStartY.current - finalY;
-    const currentPercent = parseFloat(sheetRef.current.style.height) || dragStartHeight.current;
-
-    // Determine target state - use both drag distance and final position
-    let targetState: 'collapsed' | 'half' | 'expanded';
-
-    // Priority: drag distance > final position
-    if (Math.abs(deltaY) > 50) {
-      // Significant drag - follow direction
-      if (deltaY > 0) {
-        // Dragged up
-        targetState = currentPercent > 50 ? 'expanded' : 'half';
-      } else {
-        // Dragged down
-        targetState = currentPercent < 45 ? 'collapsed' : 'half';
-      }
-    } else if (Math.abs(deltaY) > 20) {
-      // Medium drag - still follow direction but be more conservative
-      if (deltaY > 0) {
-        targetState = currentPercent > 60 ? 'expanded' : 'half';
-      } else {
-        targetState = currentPercent < 35 ? 'collapsed' : 'half';
-      }
-    } else {
-      // Small movement - snap to nearest state based on current position
-      if (currentPercent < 30) {
-        targetState = 'collapsed';
-      } else if (currentPercent > 65) {
-        targetState = 'expanded';
-      } else {
-        targetState = 'half';
-      }
-    }
-
-    // Update state
-    setSheetHeight(targetState);
-
-    // Re-enable transition and sync with state
-    const targetHeight = heights[targetState];
-    setTimeout(() => {
-      if (sheetRef.current) {
-        sheetRef.current.style.transition = 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-        // Clear inline style to let CSS handle transition
-        sheetRef.current.style.height = '';
-
-        // Ensure map padding matches
-        const mapContainer = document.querySelector('.leaflet-container')?.parentElement as HTMLElement;
-        if (mapContainer) {
-          mapContainer.style.paddingBottom = `${targetHeight}vh`;
-        }
-      }
-    }, 10);
-  }, []);
   
   // Get property status helper
   const getPropertyStatus = (property: ClientProperty) => {
@@ -1801,7 +1660,7 @@ const BottomSheet: React.FC<{
   const handleClearAndShowAll = () => {
     onClearSelection();
     setViewMode('overview');
-    setSheetHeight('half'); // Return to list view
+    setSheetHeight('list'); // Return to list view
     setForecastView('live'); // Reset to live view
   };
   
@@ -1825,58 +1684,42 @@ const BottomSheet: React.FC<{
         overflow: 'hidden',
       }}
     >
-      {/* Drag Handle - Expanded drag area for better UX */}
+      {/* Header - No drag handle, just visual indicator */}
       <div
-        className="drag-handle-area"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        className="sheet-header"
         style={{
           padding: '12px 0 8px 0',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          cursor: 'grab',
-          touchAction: 'none', // Disable default touch actions for drag
-          userSelect: 'none',
-          WebkitUserSelect: 'none',
           backgroundColor: '#ffffff',
           borderTopLeftRadius: '16px',
           borderTopRightRadius: '16px',
           borderBottom: '1px solid #f3f4f6',
           position: 'relative',
           zIndex: 10,
-          minHeight: '80px' // Larger drag area for easier interaction
+          minHeight: '80px'
         }}
       >
-        {/* Gray drag handle line */}
-        <div 
+        {/* Visual indicator line (not draggable) */}
+        <div
           style={{
             width: '36px',
             height: '4px',
             backgroundColor: '#d1d5db',
             borderRadius: '2px',
             marginBottom: '12px',
-            pointerEvents: 'none' // Don't block drag events
-          }} 
+          }}
         />
         
-        {/* Header content - Make entire area draggable */}
-        <div 
+        {/* Header content */}
+        <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             width: '100%',
             padding: '0 20px',
-            pointerEvents: 'auto' // Allow clicks on buttons
-          }}
-          onClick={(e) => {
-            // Prevent drag when clicking buttons
-            const target = e.target as HTMLElement;
-            if (target.closest('button')) {
-              e.stopPropagation();
-            }
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1975,7 +1818,7 @@ const BottomSheet: React.FC<{
         onViewChange={setForecastView} 
       />
       
-      {/* Content area - Smart scrolling with pull-to-resize */}
+      {/* Content area - Pure scrolling, no drag conflicts */}
       <div
         className="bottom-sheet-content"
         style={{
@@ -1983,7 +1826,6 @@ const BottomSheet: React.FC<{
           overflowY: 'auto',
           overflowX: 'hidden',
           WebkitOverflowScrolling: 'touch',
-          touchAction: 'pan-y', // Allow vertical scrolling
         }}
       >
         {/* Forecast Views */}
