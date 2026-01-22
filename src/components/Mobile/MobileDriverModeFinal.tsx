@@ -125,9 +125,16 @@ const TopBarWithForecast: React.FC<{
   onRefresh: () => void;
   forecast: DetailedForecast | null;
   ecForecast: ECForecastData | null;
-}> = ({ temperature, maxSnow, isSnowing, onRefresh, forecast, ecForecast }) => {
+  onHeightChange?: (height: number) => void;
+}> = ({ temperature, maxSnow, isSnowing, onRefresh, forecast, ecForecast, onHeightChange }) => {
   const [forecastExpanded, setForecastExpanded] = useState(false);
   const [forecastMode, setForecastMode] = useState<'24h' | '7d'>('24h');
+
+  // 通知父组件高度变化
+  React.useEffect(() => {
+    const height = forecastExpanded ? 180 : 56;
+    onHeightChange?.( height);
+  }, [forecastExpanded, onHeightChange]);
 
   const getStatusColor = () => {
     if (maxSnow >= 5) return '#ef4444';
@@ -145,20 +152,17 @@ const TopBarWithForecast: React.FC<{
   const hourlyData = React.useMemo(() => {
     if (!forecast?.hourly) return [];
 
-    const now = new Date();
-    const currentHour = now.getHours();
-    const startIndex = 24 + currentHour; // past_days=1的偏移
-
+    // fetchDetailedForecast不使用past_days参数,所以hourly data从当前时间开始
+    // index 0 = 当前小时, index 1 = +1小时, 等等
     return Array.from({ length: 24 }, (_, i) => {
-      const index = startIndex + i;
-      if (index >= forecast.hourly.time.length) return null;
+      if (i >= forecast.hourly.time.length) return null;
 
-      const time = new Date(forecast.hourly.time[index]);
+      const time = new Date(forecast.hourly.time[i]);
       return {
         hour: time.getHours(),
-        temp: forecast.hourly.temperature_2m[index],
-        snow: forecast.hourly.snowfall[index] || 0,
-        weatherCode: forecast.hourly.weather_code?.[index]
+        temp: forecast.hourly.temperature_2m[i],
+        snow: forecast.hourly.snowfall[i] || 0,
+        weatherCode: forecast.hourly.weather_code?.[i]
       };
     }).filter(Boolean) as Array<{ hour: number; temp: number; snow: number; weatherCode?: number }>;
   }, [forecast]);
@@ -187,14 +191,15 @@ const TopBarWithForecast: React.FC<{
       top: 0,
       left: 0,
       right: 0,
-      height: forecastExpanded ? '140px' : '56px',
+      height: forecastExpanded ? '180px' : '56px',
       backgroundColor: '#ffffff',
       zIndex: 2000,
       boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
       borderBottom: `3px solid ${getStatusColor()}`,
       transition: 'height 0.3s ease',
       display: 'flex',
-      flexDirection: 'column'
+      flexDirection: 'column',
+      paddingTop: 'env(safe-area-inset-top, 0px)'
     }}>
       {/* 主状态栏 */}
       <div style={{
@@ -283,23 +288,25 @@ const TopBarWithForecast: React.FC<{
           {/* 切换按钮 */}
           <div style={{
             display: 'flex',
-            padding: '8px 16px',
-            gap: '8px',
-            borderBottom: '1px solid #f3f4f6'
+            padding: '6px 16px',
+            gap: '6px',
+            borderBottom: '1px solid #f3f4f6',
+            flexShrink: 0
           }}>
             <button
               onClick={() => setForecastMode('24h')}
               style={{
                 flex: 1,
-                padding: '6px 12px',
+                padding: '5px 10px',
                 border: 'none',
                 borderRadius: '6px',
                 backgroundColor: forecastMode === '24h' ? '#3b82f6' : 'transparent',
                 color: forecastMode === '24h' ? '#ffffff' : '#6b7280',
-                fontSize: '0.8rem',
+                fontSize: '0.75rem',
                 fontWeight: 600,
                 cursor: 'pointer',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                touchAction: 'manipulation'
               }}
             >
               24 Hours
@@ -308,15 +315,16 @@ const TopBarWithForecast: React.FC<{
               onClick={() => setForecastMode('7d')}
               style={{
                 flex: 1,
-                padding: '6px 12px',
+                padding: '5px 10px',
                 border: 'none',
                 borderRadius: '6px',
                 backgroundColor: forecastMode === '7d' ? '#3b82f6' : 'transparent',
                 color: forecastMode === '7d' ? '#ffffff' : '#6b7280',
-                fontSize: '0.8rem',
+                fontSize: '0.75rem',
                 fontWeight: 600,
                 cursor: 'pointer',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                touchAction: 'manipulation'
               }}
             >
               7 Days
@@ -329,32 +337,45 @@ const TopBarWithForecast: React.FC<{
             overflowX: 'auto',
             overflowY: 'hidden',
             WebkitOverflowScrolling: 'touch',
-            padding: '8px 0'
+            padding: '10px 0',
+            minHeight: '90px'
           }}>
             {forecastMode === '24h' ? (
               <div style={{
                 display: 'flex',
-                gap: '12px',
+                gap: '10px',
                 padding: '0 16px',
-                minWidth: 'max-content'
+                minWidth: 'max-content',
+                height: '100%',
+                alignItems: 'center'
               }}>
                 {hourlyData.map((hour, i) => (
                   <div key={i} style={{
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '4px',
-                    minWidth: '50px'
+                    gap: '3px',
+                    minWidth: '48px'
                   }}>
-                    <div style={{ fontSize: '0.7rem', color: i === 0 ? '#3b82f6' : '#9ca3af', fontWeight: i === 0 ? 600 : 400 }}>
-                      {i === 0 ? 'Now' : `${hour.hour}:00`}
+                    <div style={{
+                      fontSize: '0.65rem',
+                      color: i === 0 ? '#3b82f6' : '#9ca3af',
+                      fontWeight: i === 0 ? 600 : 400,
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {i === 0 ? 'Now' : `${hour.hour.toString().padStart(2, '0')}:00`}
                     </div>
-                    {getWeatherIcon(hour.weatherCode, 20, '#6b7280')}
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#111827' }}>
+                    {getWeatherIcon(hour.weatherCode, 18, '#6b7280')}
+                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#111827' }}>
                       {Math.round(hour.temp)}°
                     </div>
-                    <div style={{ fontSize: '0.7rem', color: hour.snow > 0 ? '#3b82f6' : '#d1d5db', fontWeight: hour.snow > 0 ? 600 : 400 }}>
-                      {hour.snow > 0 ? `${hour.snow.toFixed(1)}cm` : '-'}
+                    <div style={{
+                      fontSize: '0.65rem',
+                      color: hour.snow > 0 ? '#3b82f6' : '#d1d5db',
+                      fontWeight: hour.snow > 0 ? 600 : 400,
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {hour.snow > 0 ? `${hour.snow.toFixed(1)}` : '-'}
                     </div>
                   </div>
                 ))}
@@ -362,30 +383,42 @@ const TopBarWithForecast: React.FC<{
             ) : (
               <div style={{
                 display: 'flex',
-                gap: '12px',
+                gap: '10px',
                 padding: '0 16px',
-                minWidth: 'max-content'
+                minWidth: 'max-content',
+                height: '100%',
+                alignItems: 'center'
               }}>
                 {dailyData.map((day, i) => (
                   <div key={i} style={{
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '4px',
-                    minWidth: '55px'
+                    gap: '3px',
+                    minWidth: '52px'
                   }}>
-                    <div style={{ fontSize: '0.75rem', color: i === 0 ? '#3b82f6' : '#6b7280', fontWeight: 600 }}>
+                    <div style={{
+                      fontSize: '0.7rem',
+                      color: i === 0 ? '#3b82f6' : '#6b7280',
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap'
+                    }}>
                       {day.day}
                     </div>
-                    {getWeatherIcon(day.weatherCode, 22, '#6b7280')}
+                    {getWeatherIcon(day.weatherCode, 20, '#6b7280')}
                     <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#111827' }}>
                       {Math.round(day.tempMax)}°
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                    <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>
                       {Math.round(day.tempMin)}°
                     </div>
-                    <div style={{ fontSize: '0.7rem', color: day.snowSum > 0 ? '#3b82f6' : '#d1d5db', fontWeight: day.snowSum > 0 ? 600 : 400 }}>
-                      {day.snowSum > 0 ? `${day.snowSum.toFixed(1)}cm` : '-'}
+                    <div style={{
+                      fontSize: '0.65rem',
+                      color: day.snowSum > 0 ? '#3b82f6' : '#d1d5db',
+                      fontWeight: day.snowSum > 0 ? 600 : 400,
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {day.snowSum > 0 ? `${day.snowSum.toFixed(1)}` : '-'}
                     </div>
                   </div>
                 ))}
@@ -413,19 +446,16 @@ const PropertyDetailCard: React.FC<{
   const next24h = React.useMemo(() => {
     if (!forecast?.hourly || !weatherData) return null;
 
-    const now = new Date();
-    const currentHour = now.getHours();
-    const startIndex = 24 + currentHour;
-
+    // fetchDetailedForecast不使用past_days参数,所以index 0就是当前小时
+    // 我们直接从index 0开始计算未来24小时
     let totalSnow = 0;
     let maxSnowHour = 0;
     let hasSnow = false;
 
-    for (let i = 0; i < 24; i++) {
-      const index = startIndex + i;
-      if (index >= forecast.hourly.snowfall.length) break;
+    const maxIndex = Math.min(24, forecast.hourly.snowfall.length);
 
-      const snowfall = forecast.hourly.snowfall[index] || 0;
+    for (let i = 0; i < maxIndex; i++) {
+      const snowfall = forecast.hourly.snowfall[i] || 0;
       totalSnow += snowfall;
       if (snowfall > maxSnowHour) maxSnowHour = snowfall;
       if (snowfall > 0.1) hasSnow = true;
@@ -434,8 +464,8 @@ const PropertyDetailCard: React.FC<{
     // 计算降雪概率(简化: 如果有降雪则显示概率)
     const snowProbability = hasSnow ? Math.min(100, Math.round((totalSnow / 5) * 100)) : 0;
 
-    // 获取主要天气代码
-    const weatherCode = forecast.hourly.weather_code?.[startIndex + 12]; // 12小时后的天气
+    // 获取主要天气代码 - 使用12小时后的天气代码
+    const weatherCode = forecast.hourly.weather_code?.[Math.min(12, forecast.hourly.weather_code.length - 1)];
 
     return {
       totalSnow,
@@ -630,7 +660,8 @@ const BottomSheet: React.FC<{
   onClearSelection: () => void;
   safeAreaBottom: number;
   forecast: DetailedForecast | null;
-}> = ({ weatherData, geoJsonData, selectedPropertyId, onSelectProperty, selectedFeature, onClearSelection, safeAreaBottom, forecast }) => {
+  headerHeight: number;
+}> = ({ weatherData, geoJsonData, selectedPropertyId, onSelectProperty, selectedFeature, onClearSelection, safeAreaBottom, forecast, headerHeight }) => {
   const [expanded, setExpanded] = useState(false);
   const [expandedZones, setExpandedZones] = useState<Set<string>>(new Set());
 
@@ -704,7 +735,7 @@ const BottomSheet: React.FC<{
           }}
           style={{
             position: 'fixed',
-            top: 56,
+            top: `${headerHeight}px`,
             left: 0,
             right: 0,
             bottom: `${currentHeight}vh`,
@@ -903,6 +934,7 @@ const BottomSheet: React.FC<{
  */
 const MobileDriverModeFinal: React.FC<MobileDriverModeFinalProps> = (props) => {
   const deviceInfo = useDeviceInfo();
+  const [headerHeight, setHeaderHeight] = useState(56);
 
   const allSnow = Array.from(props.weatherData.values()).map(d => d.pastSnow24h);
   const maxSnow = allSnow.length ? Math.max(...allSnow) : 0;
@@ -916,6 +948,7 @@ const MobileDriverModeFinal: React.FC<MobileDriverModeFinalProps> = (props) => {
         onRefresh={props.onRefresh}
         forecast={props.forecast || null}
         ecForecast={props.ecForecast || null}
+        onHeightChange={setHeaderHeight}
       />
 
       <BottomSheet
@@ -927,6 +960,7 @@ const MobileDriverModeFinal: React.FC<MobileDriverModeFinalProps> = (props) => {
         onClearSelection={props.onClearSelection}
         safeAreaBottom={deviceInfo.safeAreaInsets.bottom}
         forecast={props.forecast || null}
+        headerHeight={headerHeight}
       />
     </>
   );
