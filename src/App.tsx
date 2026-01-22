@@ -7,7 +7,7 @@ import GlobalForecastBar from './components/Weather/GlobalForecastBarApple';
 import Header from './components/Dashboard/Header';
 import MetricsCards from './components/Dashboard/MetricsCards';
 import PropertyList from './components/Dashboard/PropertyList';
-import MobileDriverModeSimple from './components/Mobile/MobileDriverModeSimple';
+import MobileDriverModeFinal from './components/Mobile/MobileDriverModeFinal';
 import { LayersIcon } from './components/Icons/Icons';
 import useMobile from './hooks/useMobile';
 import { useDeviceInfo } from './hooks/useDeviceInfo';
@@ -334,8 +334,8 @@ function App() {
           />
         </div>
         
-        {/* Driver Mode UI Overlay - Simple Clean Version */}
-        <MobileDriverModeSimple
+        {/* Driver Mode UI Overlay - Final Version with Forecast */}
+        <MobileDriverModeFinal
           temperature={cityWeather?.current?.temperature ?? null}
           snowAccumulation={maxSnow}
           avgSnow={avgSnow}
