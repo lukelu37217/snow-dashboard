@@ -3,8 +3,61 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>snow-dashboard</title>
+
+    <!-- Enhanced Mobile Viewport Configuration -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+
+    <!-- iOS PWA Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Snow Dashboard" />
+
+    <!-- Theme Color for Mobile Browsers -->
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#111827" media="(prefers-color-scheme: dark)" />
+
+    <!-- Disable Phone Number Detection -->
+    <meta name="format-detection" content="telephone=no" />
+
+    <title>Snow Removal Dashboard</title>
+
+    <!-- iOS Safe Area CSS Variables -->
+    <style>
+      :root {
+        /* Safe area insets fallback for non-iOS devices */
+        --sat: env(safe-area-inset-top, 0px);
+        --sar: env(safe-area-inset-right, 0px);
+        --sab: env(safe-area-inset-bottom, 0px);
+        --sal: env(safe-area-inset-left, 0px);
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        /* Support for iOS safe areas */
+        padding-top: env(safe-area-inset-top);
+        padding-right: env(safe-area-inset-right);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        /* Prevent text size adjustment on mobile */
+        -webkit-text-size-adjust: 100%;
+        /* Smooth scrolling */
+        -webkit-overflow-scrolling: touch;
+        /* No tap highlight */
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      /* Ensure app fills viewport */
+      #root {
+        min-height: 100vh;
+        min-height: -webkit-fill-available;
+      }
+
+      /* Prevent pull-to-refresh on mobile */
+      body {
+        overscroll-behavior-y: contain;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
