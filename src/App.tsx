@@ -7,12 +7,11 @@ import GlobalForecastBar from './components/Weather/GlobalForecastBarApple';
 import Header from './components/Dashboard/Header';
 import MetricsCards from './components/Dashboard/MetricsCards';
 import PropertyList from './components/Dashboard/PropertyList';
-import MobileDriverMode from './components/Mobile/MobileDriverMode';
-import MobileDriverModeEnhanced from './components/Mobile/MobileDriverModeEnhanced';
+import MobileDriverModeSimple from './components/Mobile/MobileDriverModeSimple';
 import { LayersIcon } from './components/Icons/Icons';
 import useMobile from './hooks/useMobile';
 import { useDeviceInfo } from './hooks/useDeviceInfo';
-import { flyToProperty, flyToZone } from './utils/mapHelpers';
+import { flyToProperty } from './utils/mapHelpers';
 
 import { getCentroid } from './services/geoUtils';
 import {
@@ -335,8 +334,8 @@ function App() {
           />
         </div>
         
-        {/* Driver Mode UI Overlay - Enhanced Version */}
-        <MobileDriverModeEnhanced
+        {/* Driver Mode UI Overlay - Simple Clean Version */}
+        <MobileDriverModeSimple
           temperature={cityWeather?.current?.temperature ?? null}
           snowAccumulation={maxSnow}
           avgSnow={avgSnow}
