@@ -1,5 +1,6 @@
 
 import { useState, useEffect, useRef } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import './App.css';
 import SnowMap from './components/Map/SnowMap';
 import NeighborhoodDetail from './components/Weather/NeighborhoodDetail';
@@ -470,6 +471,8 @@ function App() {
           onClose={handleCloseDetail}
         />
       )}
+
+      <Analytics />
     </div>
   );
 }
