@@ -441,7 +441,7 @@ function App() {
           style={{
             width: '35%',
             minWidth: '400px',
-            backgroundColor: '#f8fafc',
+            backgroundColor: '#ffffff',
             borderRight: '1px solid #e2e8f0',
             padding: '20px',
             overflowY: 'auto',

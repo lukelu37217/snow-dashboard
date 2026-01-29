@@ -264,30 +264,36 @@ const TopBarWithForecast: React.FC<{
         {/* 右侧: 通知 + 预报按钮 + 刷新 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {/* 通知按钮 */}
-          {onToggleNotifications && (
-            <button
-              onClick={onToggleNotifications}
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                border: 'none',
-                backgroundColor: notificationsEnabled ? '#dbeafe' : '#f3f4f6',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                touchAction: 'manipulation'
-              }}
-              title={notificationsEnabled ? 'Disable notifications' : 'Enable notifications'}
-            >
-              {notificationsEnabled 
-                ? <BellIcon size={20} color="#3b82f6" />
-                : <BellOffIcon size={20} color="#6b7280" />
+          <button
+            onClick={() => {
+              console.log('[Mobile] Notification button clicked');
+              if (onToggleNotifications) {
+                onToggleNotifications();
               }
-            </button>
-          )}
+            }}
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              border: 'none',
+              backgroundColor: notificationsEnabled ? '#dbeafe' : '#f3f4f6',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              touchAction: 'manipulation',
+              WebkitTapHighlightColor: 'transparent',
+              zIndex: 10,
+              position: 'relative'
+            }}
+            aria-label={notificationsEnabled ? 'Disable notifications' : 'Enable notifications'}
+          >
+            {notificationsEnabled 
+              ? <BellIcon size={20} color="#3b82f6" />
+              : <BellOffIcon size={20} color="#6b7280" />
+            }
+          </button>
 
           <button
             onClick={() => setForecastExpanded(!forecastExpanded)}

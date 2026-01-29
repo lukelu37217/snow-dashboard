@@ -457,9 +457,9 @@ button:focus-visible, a:focus-visible {
     border-left: 3px solid #10b981;
 }
 
-/* Desktop sidebar - clean, minimal look */
+/* Desktop sidebar - clean white background */
 .sidebar-desktop {
-    background: var(--bg-secondary) !important;
+    background: #ffffff !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
 }
