@@ -7,11 +7,19 @@ import GlobalForecastBar from './components/Weather/GlobalForecastBarApple';
 import Header from './components/Dashboard/Header';
 import MetricsCards from './components/Dashboard/MetricsCards';
 import PropertyList from './components/Dashboard/PropertyList';
+<<<<<<< HEAD
 import AlertBanner from './components/Dashboard/AlertBanner';
 import MobileDriverMode from './components/Mobile/MobileDriverMode';
 import { LayersIcon, BellIcon, BellOffIcon } from './components/Icons/Icons';
 import useMobile from './hooks/useMobile';
 import { notificationService, type SnowAlert } from './services/notificationService';
+=======
+import MobileDriverModeFinal from './components/Mobile/MobileDriverModeFinal';
+import { LayersIcon } from './components/Icons/Icons';
+import useMobile from './hooks/useMobile';
+import { useDeviceInfo } from './hooks/useDeviceInfo';
+import { flyToProperty } from './utils/mapHelpers';
+>>>>>>> origin/main
 
 import { getCentroid } from './services/geoUtils';
 import {
@@ -41,6 +49,7 @@ let isRefreshing = false;
 
 function App() {
   const isMobile = useMobile(); // Mobile detection hook
+  const deviceInfo = useDeviceInfo(); // Enhanced device info
   const [geoData, setGeoData] = useState<any>(null);           // ALL zones for map context
   const [serviceGeoData, setServiceGeoData] = useState<any>(null); // Only service zones for weather API
   const [syntheticZones, setSyntheticZones] = useState<SyntheticZone[]>([]); // Bubble zones for orphans
@@ -283,19 +292,22 @@ function App() {
   // Handler for clicking on property addresses - flies to pin and highlights
   const handlePropertySelect = (property: ClientProperty) => {
     console.log(`🏠 Property Click: "${property.address}" | Zone: ${property.zone}`);
-    
+
     setSelectedPropertyId(property.id);
-    
+
     // Find the zone feature for this property
     const zoneFeature = geoData?.features.find((f: any) => f.properties.name === property.zone);
     if (zoneFeature) {
       setSelectedZoneId(zoneFeature.properties.id);
       setSelectedFeature(zoneFeature);
     }
-    
-    // Fly to property location on map when clicked from sidebar
+
+    // Enhanced smooth fly animation to property
     if (mapRef.current && property.lat && property.lng) {
-      mapRef.current.flyTo([property.lat, property.lng], 15, { duration: 0.5 });
+      flyToProperty(mapRef.current, property, {
+        zoom: deviceInfo.isMobile ? 16 : 15,
+        duration: 1.2 // Smoother animation
+      });
     }
   };
 
@@ -387,8 +399,8 @@ function App() {
           />
         </div>
         
-        {/* Driver Mode UI Overlay */}
-        <MobileDriverMode
+        {/* Driver Mode UI Overlay - Final Version with Forecast */}
+        <MobileDriverModeFinal
           temperature={cityWeather?.current?.temperature ?? null}
           snowAccumulation={maxSnow}
           avgSnow={avgSnow}
