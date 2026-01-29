@@ -366,6 +366,72 @@ button:focus-visible, a:focus-visible {
     }
 }
 
+/* ========================================
+   DESIGN POLISH - PROFESSIONAL ACCENTS
+   Reduces "AI-generated" uniform look
+   ======================================== */
+
+/* Vary border-radius for different contexts */
+.zone-card {
+    border-radius: 8px;
+}
+
+.status-badge {
+    border-radius: 4px;
+}
+
+.header-btn {
+    border-radius: 6px;
+}
+
+/* Left border accents for status indication */
+.zone-card-residential {
+    border-left: 3px solid #f59e0b;
+}
+
+.zone-card-commercial {
+    border-left: 3px solid #ef4444;
+}
+
+.zone-card-clear {
+    border-left: 3px solid #10b981;
+}
+
+/* Desktop sidebar - remove glassmorphism, use solid background */
+.sidebar-desktop {
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* Status-based shadow colors */
+.shadow-status-high {
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+}
+
+.shadow-status-medium {
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+}
+
+.shadow-status-low {
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+/* Micro-interactions for buttons */
+.btn-press:active {
+    transform: scale(0.98);
+}
+
+/* Left-heavy padding for content cards (more professional) */
+.content-card-asymmetric {
+    padding: 14px 16px 14px 20px;
+}
+
+/* Subtle background patterns for sections */
+.section-subtle {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
 /* Tablet adjustments */
 @media (min-width: 769px) and (max-width: 1024px) {
     .sidebar-desktop {

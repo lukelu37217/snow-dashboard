@@ -1,6 +1,6 @@
 /**
  * MobileDriverMode Component (v3 - Future Sight)
- * 
+ *
  * "Driver Mode" mobile layout with Google Maps-style interaction.
  * Features:
  * - Clean professional top bar (no emojis)
@@ -17,59 +17,20 @@ import type { ECForecastData } from '../../services/weatherCanadaService';
 import { CLIENT_PROPERTIES } from '../../config/clientProperties';
 import { getZoneStatus } from '../../utils/zoneStatusHelper';
 import { ecIconToWmoCode } from '../../services/weatherCanadaService';
-
-// SVG Icons (Professional, no emojis)
-const SnowflakeIcon: React.FC<{ size?: number; color?: string }> = ({ size = 16, color = 'currentColor' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="2" x2="12" y2="22" />
-    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-    <line x1="19.07" y1="4.93" x2="4.93" y2="19.07" />
-    <line x1="2" y1="12" x2="22" y2="12" />
-    <line x1="12" y1="2" x2="15" y2="5" />
-    <line x1="12" y1="2" x2="9" y2="5" />
-    <line x1="12" y1="22" x2="15" y2="19" />
-    <line x1="12" y1="22" x2="9" y2="19" />
-    <line x1="2" y1="12" x2="5" y2="9" />
-    <line x1="2" y1="12" x2="5" y2="15" />
-    <line x1="22" y1="12" x2="19" y2="9" />
-    <line x1="22" y1="12" x2="19" y2="15" />
-  </svg>
-);
-
-const RefreshIcon: React.FC<{ size?: number; color?: string }> = ({ size = 18, color = 'currentColor' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="23 4 23 10 17 10" />
-    <polyline points="1 20 1 14 7 14" />
-    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-  </svg>
-);
-
-const CheckIcon: React.FC<{ size?: number; color?: string }> = ({ size = 14, color = 'currentColor' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
-
-const AlertIcon: React.FC<{ size?: number; color?: string }> = ({ size = 14, color = 'currentColor' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-    <line x1="12" y1="9" x2="12" y2="13" />
-    <line x1="12" y1="17" x2="12.01" y2="17" />
-  </svg>
-);
-
-const ChevronUpIcon: React.FC<{ size?: number; color?: string }> = ({ size = 20, color = 'currentColor' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="18 15 12 9 6 15" />
-  </svg>
-);
-
-const MapPinIcon: React.FC<{ size?: number; color?: string }> = ({ size = 16, color = 'currentColor' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-    <circle cx="12" cy="10" r="3" />
-  </svg>
-);
+import {
+  SnowIcon as SnowflakeIcon,
+  RefreshIcon,
+  CheckIcon,
+  AlertIcon,
+  ChevronUpIcon,
+  MapPinIcon,
+  ChevronRightIcon,
+  WindIcon,
+  ClockIcon,
+  CalendarIcon,
+  WeatherIcon,
+  BlowingSnowIconUI,
+} from '../Icons';
 
 // View mode types
 type ViewMode = 'overview' | 'zone-detail' | 'property-detail';
@@ -320,15 +281,6 @@ const PropertyListItem: React.FC<{
       {status.label}
     </div>
   </button>
-);
-
-/**
- * Chevron Right Icon
- */
-const ChevronRightIcon: React.FC<{ size?: number; color?: string }> = ({ size = 16, color = 'currentColor' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="9 18 15 12 9 6" />
-  </svg>
 );
 
 /**
@@ -629,15 +581,6 @@ const ProgressBar: React.FC<{
 };
 
 /**
- * Wind Icon
- */
-const WindIcon: React.FC<{ size?: number; color?: string }> = ({ size = 16, color = 'currentColor' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" />
-  </svg>
-);
-
-/**
  * Zone Detail Card - Enhanced with Section A & B (Like Desktop)
  */
 const ZoneDetailCard: React.FC<{
@@ -650,13 +593,15 @@ const ZoneDetailCard: React.FC<{
   forecast?: DetailedForecast | null;
 }> = ({ feature, weatherData, onClose, propertiesInZone, onSelectProperty, selectedPropertyId }) => {
   const status = getZoneStatus(weatherData);
-  
+
   // Calculate snow removal data like desktop
   const pastSnow24h = weatherData?.pastSnow24h || 0;
-  
-  // Calculate drift risk based on wind gusts (high wind + snow = drift risk)
+
+  // Get drift risk from weatherData (calculated in weatherService)
+  const driftRiskInfo = weatherData?.driftRisk;
+  const driftRiskLevel = driftRiskInfo?.level || 'none';
+  const driftRiskPercent = driftRiskInfo?.percent || 0;
   const windGusts = weatherData?.windGusts || 0;
-  const driftRisk = Math.min(100, Math.round((windGusts / 50) * 100 * (pastSnow24h > 0.2 ? 1 : 0.3)));
   
   // Expected additional snow (next 24h - past 24h)
   const expectedAdditional = Math.max(0, (weatherData?.snowAccumulation24h || 0) - pastSnow24h);
@@ -676,7 +621,7 @@ const ZoneDetailCard: React.FC<{
     if (expectedAdditional >= 2) {
       return { text: 'Significant snow incoming. Prepare crews for deployment.', urgent: false };
     }
-    if (driftRisk > 50) {
+    if (driftRiskLevel === 'high' || driftRiskLevel === 'moderate') {
       return { text: 'High drift risk. Monitor for drifting even with low accumulation.', urgent: false };
     }
     return { text: 'Conditions clear. Monitor forecast for changes.', urgent: false };
@@ -737,7 +682,60 @@ const ZoneDetailCard: React.FC<{
           Back
         </button>
       </div>
-      
+
+      {/* Drift Warning Banner - Shows when risk is moderate or high */}
+      {(driftRiskLevel === 'high' || driftRiskLevel === 'moderate') && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          padding: '10px 14px',
+          borderRadius: '10px',
+          marginBottom: '12px',
+          backgroundColor: driftRiskLevel === 'high' ? '#fef2f2' : '#fffbeb',
+          border: `1px solid ${driftRiskLevel === 'high' ? '#fecaca' : '#fde68a'}`
+        }}>
+          <div style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: driftRiskLevel === 'high' ? '#ef4444' : '#f59e0b',
+            flexShrink: 0
+          }}>
+            <BlowingSnowIconUI size={18} color="#fff" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              color: driftRiskLevel === 'high' ? '#dc2626' : '#d97706',
+              marginBottom: '2px',
+              fontFamily: 'Inter, system-ui, sans-serif'
+            }}>
+              {driftRiskLevel === 'high' ? 'High' : 'Moderate'} Drift Risk
+            </div>
+            <div style={{
+              fontSize: '0.7rem',
+              color: '#6b7280',
+              fontFamily: 'Inter, system-ui, sans-serif'
+            }}>
+              {driftRiskInfo?.factors?.slice(0, 2).join(' · ') || `Wind ${Math.round(windGusts)}km/h with recent snow`}
+            </div>
+          </div>
+          <div style={{
+            fontSize: '1.1rem',
+            fontWeight: 800,
+            color: driftRiskLevel === 'high' ? '#dc2626' : '#d97706',
+            fontFamily: 'Inter, system-ui, sans-serif'
+          }}>
+            {driftRiskPercent}%
+          </div>
+        </div>
+      )}
+
       {/* SECTION A: Ground Reality - Like Desktop */}
       <div style={{
         backgroundColor: '#f9fafb',
@@ -901,15 +899,15 @@ const ZoneDetailCard: React.FC<{
             <div style={{
               fontSize: '1.5rem',
               fontWeight: 700,
-              color: driftRisk > 50 ? '#d97706' : '#16a34a',
+              color: driftRiskLevel === 'high' ? '#dc2626' : driftRiskLevel === 'moderate' ? '#d97706' : '#16a34a',
               fontFamily: 'Inter, system-ui, sans-serif',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '4px'
             }}>
-              <WindIcon size={18} color={driftRisk > 50 ? '#d97706' : '#16a34a'} />
-              {driftRisk}
+              <BlowingSnowIconUI size={18} color={driftRiskLevel === 'high' ? '#dc2626' : driftRiskLevel === 'moderate' ? '#d97706' : '#16a34a'} />
+              {driftRiskPercent}%
             </div>
             <div style={{
               fontSize: '0.65rem',
@@ -1085,94 +1083,6 @@ const ForecastSegmentedControl: React.FC<{
 };
 
 /**
- * Clock Icon for hourly forecast
- */
-const ClockIcon: React.FC<{ size?: number; color?: string }> = ({ size = 16, color = 'currentColor' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10" />
-    <polyline points="12 6 12 12 16 14" />
-  </svg>
-);
-
-/**
- * Calendar Icon for 7-day forecast
- */
-const CalendarIcon: React.FC<{ size?: number; color?: string }> = ({ size = 16, color = 'currentColor' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-    <line x1="16" y1="2" x2="16" y2="6" />
-    <line x1="8" y1="2" x2="8" y2="6" />
-    <line x1="3" y1="10" x2="21" y2="10" />
-  </svg>
-);
-
-/**
- * Get WMO Weather Icon as SVG
- */
-const getWeatherIcon = (code: number | undefined, size: number = 24): React.ReactElement => {
-  // Clear sky
-  if (code === 0 || code === 1) {
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="#fbbf24">
-        <circle cx="12" cy="12" r="5" />
-        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" 
-          stroke="#fbbf24" strokeWidth="2" fill="none" strokeLinecap="round" />
-      </svg>
-    );
-  }
-  
-  // Partly cloudy
-  if (code === 2) {
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24">
-        <circle cx="8" cy="8" r="4" fill="#fbbf24" />
-        <path d="M18 10h.01A5 5 0 1 1 8 13h10a3 3 0 0 0 0-3z" fill="#94a3b8" />
-      </svg>
-    );
-  }
-  
-  // Cloudy
-  if (code === 3) {
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <path d="M18 10h.01A5 5 0 1 1 8 13h10a3 3 0 0 0 0-3z" fill="#9ca3af" stroke="#6b7280" strokeWidth="1" />
-      </svg>
-    );
-  }
-  
-  // Snow (71-77, 85-86)
-  if ((code && code >= 71 && code <= 77) || code === 85 || code === 86) {
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <path d="M18 10h.01A5 5 0 1 1 8 13h10a3 3 0 0 0 0-3z" fill="#94a3b8" />
-        <circle cx="8" cy="18" r="1" fill="#60a5fa" />
-        <circle cx="12" cy="20" r="1" fill="#60a5fa" />
-        <circle cx="16" cy="18" r="1" fill="#60a5fa" />
-        <circle cx="10" cy="16" r="1" fill="#60a5fa" />
-        <circle cx="14" cy="16" r="1" fill="#60a5fa" />
-      </svg>
-    );
-  }
-  
-  // Rain (61-67, 80-82)
-  if ((code && code >= 61 && code <= 67) || (code && code >= 80 && code <= 82)) {
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <path d="M18 10h.01A5 5 0 1 1 8 13h10a3 3 0 0 0 0-3z" fill="#6b7280" />
-        <path d="M8 17l-1 3M12 17l-1 3M16 17l-1 3" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" />
-      </svg>
-    );
-  }
-  
-  // Default: Cloudy
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M18 10h.01A5 5 0 1 1 8 13h10a3 3 0 0 0 0-3z" fill="#9ca3af" stroke="#6b7280" strokeWidth="1" />
-    </svg>
-  );
-};
-
-/**
  * Hourly Forecast View - "Next 24h" Chart
  * Shows when big snow starts - driver can prepare truck
  */
@@ -1308,7 +1218,7 @@ const HourlyForecastView: React.FC<{
                 
                 {/* Weather Icon */}
                 <div style={{ height: '24px', display: 'flex', alignItems: 'center' }}>
-                  {getWeatherIcon(hour.weatherCode, 24)}
+                  <WeatherIcon wmoCode={hour.weatherCode} size={24} />
                 </div>
                 
                 {/* Temperature */}
@@ -1475,7 +1385,7 @@ const SevenDayForecastView: React.FC<{
               
               {/* Weather Icon */}
               <div style={{ width: '36px', display: 'flex', justifyContent: 'center' }}>
-                {getWeatherIcon(weatherCode, 28)}
+                <WeatherIcon wmoCode={weatherCode} size={28} />
               </div>
               
               {/* Temp Range */}

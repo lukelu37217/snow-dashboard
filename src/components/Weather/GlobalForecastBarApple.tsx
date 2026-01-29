@@ -1,7 +1,7 @@
 /**
  * Apple-Style Global Forecast Bar
- * Features: Glassmorphism, Horizontal Scroll, Phosphor Icons, Smooth Animations
- * 
+ * Features: Glassmorphism, Horizontal Scroll, Unified Icons, Smooth Animations
+ *
  * Data Sources:
  * - 24h forecast: Weather Canada City Page Weather API (primary)
  * - 7d forecast: Open-Meteo API (fallback, as Weather Canada only provides ~48h hourly)
@@ -9,22 +9,11 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { 
-
-  Wind, 
-  CloudSnow, 
-  Sun, 
-  Cloud,
-  CloudRain,
-  CloudFog,
-  Lightning,
-  Moon,
-  CloudMoon,
-  Drop
-} from 'phosphor-react';
 import type { DetailedForecast } from '../../services/weatherService';
 import type { RealTimeObservation, ECForecastData } from '../../services/weatherCanadaService';
 import { ecIconToWmoCode } from '../../services/weatherCanadaService';
+import { WeatherIcon, WindIcon, SnowIcon, BlowingSnowIconUI } from '../Icons';
+import type { DriftRiskLevel } from '../../services/weatherService';
 
 interface ForecastSelection {
   type: 'hour' | 'day';
@@ -52,7 +41,7 @@ const GlobalForecastBar: React.FC<GlobalForecastBarProps> = ({ forecast, realtim
       <div style={styles.container}>
         <div style={styles.glassBackground} />
         <div style={styles.loading}>
-          <CloudSnow size={24} weight="thin" style={{ opacity: 0.5 }} />
+          <SnowIcon size={24} color="#94a3b8" />
           <span style={{ marginLeft: '10px' }}>Loading forecast...</span>
         </div>
       </div>
@@ -85,117 +74,12 @@ const GlobalForecastBar: React.FC<GlobalForecastBarProps> = ({ forecast, realtim
   const isNightTime = (hour: number): boolean => hour < 6 || hour >= 20;
 
   /**
-   * WMO Weather Code interpretation (International Standard)
-   * Reference: https://open-meteo.com/en/docs
-   * 
-   * 0: Clear sky
-   * 1, 2, 3: Mainly clear, partly cloudy, overcast
-   * 45, 48: Fog
-   * 51, 53, 55: Drizzle (light, moderate, dense)
-   * 56, 57: Freezing drizzle
-   * 61, 63, 65: Rain (slight, moderate, heavy)
-   * 66, 67: Freezing rain
-   * 71, 73, 75: Snow fall (slight, moderate, heavy)
-   * 77: Snow grains
-   * 80, 81, 82: Rain showers (slight, moderate, violent)
-   * 85, 86: Snow showers (slight, heavy)
-   * 95: Thunderstorm
-   * 96, 99: Thunderstorm with hail
+   * Get weather icon using unified WeatherIcon component
+   * WMO codes are automatically mapped to the appropriate icon
    */
   const getWeatherIconByCode = (code: number | undefined, hour: number, size: number = 32): React.ReactElement => {
     const isNight = isNightTime(hour);
-    
-    // Default fallback if no code
-    if (code === undefined || code === null) {
-      return isNight 
-        ? <Moon size={size} weight="fill" color="#6366f1" />
-        : <Sun size={size} weight="fill" color="#f59e0b" />;
-    }
-
-    // Clear sky
-    if (code === 0) {
-      return isNight
-        ? <Moon size={size} weight="fill" color="#6366f1" />
-        : <Sun size={size} weight="fill" color="#f59e0b" />;
-    }
-    
-    // Mainly clear
-    if (code === 1) {
-      return isNight
-        ? <Moon size={size} weight="thin" color="#818cf8" />
-        : <Sun size={size} weight="thin" color="#fbbf24" />;
-    }
-    
-    // Partly cloudy
-    if (code === 2) {
-      return isNight
-        ? <CloudMoon size={size} weight="fill" color="#94a3b8" />
-        : <Cloud size={size} weight="thin" color="#9ca3af" />;
-    }
-    
-    // Overcast
-    if (code === 3) {
-      return <Cloud size={size} weight="fill" color="#6b7280" />;
-    }
-    
-    // Fog
-    if (code === 45 || code === 48) {
-      return <CloudFog size={size} weight="fill" color="#9ca3af" />;
-    }
-    
-    // Drizzle (light, moderate, dense)
-    if (code >= 51 && code <= 55) {
-      return <Drop size={size} weight="fill" color="#60a5fa" />;
-    }
-    
-    // Freezing drizzle
-    if (code === 56 || code === 57) {
-      return <Drop size={size} weight="fill" color="#93c5fd" />;
-    }
-    
-    // Rain (slight, moderate, heavy)
-    if (code >= 61 && code <= 65) {
-      const intensity = code === 65 ? 'fill' : code === 63 ? 'regular' : 'thin';
-      return <CloudRain size={size} weight={intensity as any} color="#3b82f6" />;
-    }
-    
-    // Freezing rain
-    if (code === 66 || code === 67) {
-      return <CloudRain size={size} weight="fill" color="#60a5fa" />;
-    }
-    
-    // Snow fall (slight, moderate, heavy)
-    if (code >= 71 && code <= 75) {
-      if (code === 75) return <CloudSnow size={size} weight="fill" color="#3b82f6" />; // Heavy
-      if (code === 73) return <CloudSnow size={size} weight="regular" color="#60a5fa" />; // Moderate
-      return <CloudSnow size={size} weight="thin" color="#93c5fd" />; // Light
-    }
-    
-    // Snow grains
-    if (code === 77) {
-      return <CloudSnow size={size} weight="duotone" color="#94a3b8" />;
-    }
-    
-    // Rain showers
-    if (code >= 80 && code <= 82) {
-      const intensity = code === 82 ? 'fill' : code === 81 ? 'regular' : 'thin';
-      return <CloudRain size={size} weight={intensity as any} color="#3b82f6" />;
-    }
-    
-    // Snow showers
-    if (code === 85 || code === 86) {
-      return code === 86 
-        ? <CloudSnow size={size} weight="fill" color="#3b82f6" />
-        : <CloudSnow size={size} weight="regular" color="#60a5fa" />;
-    }
-    
-    // Thunderstorm
-    if (code >= 95) {
-      return <Lightning size={size} weight="fill" color="#eab308" />;
-    }
-    
-    // Fallback
-    return <Cloud size={size} weight="thin" color="#9ca3af" />;
+    return <WeatherIcon wmoCode={code} isNight={isNight} size={size} />;
   };
 
   // Get weather description from WMO code
@@ -227,6 +111,46 @@ const GlobalForecastBar: React.FC<GlobalForecastBarProps> = ({ forecast, realtim
     return '0';
   };
 
+  /**
+   * Calculate drift risk for a given hour based on wind and conditions
+   * Simplified version for forecast display
+   */
+  const getHourlyDriftRisk = (windGust: number, isSnowy: boolean, temp: number): DriftRiskLevel => {
+    // Need both wind and snow for drifting
+    if (!isSnowy && windGust < 35) return 'none';
+
+    // Score-based calculation
+    let score = 0;
+
+    // Wind factor
+    if (windGust >= 50) score += 40;
+    else if (windGust >= 40) score += 30;
+    else if (windGust >= 30) score += 20;
+    else if (windGust >= 25) score += 10;
+
+    // Snow factor (simplified - if snowy conditions)
+    if (isSnowy) score += 25;
+
+    // Temperature factor (colder = more drift)
+    if (temp < -15) score += 20;
+    else if (temp < -10) score += 15;
+    else if (temp < -5) score += 10;
+    else if (temp < 0) score += 5;
+
+    if (score >= 55) return 'high';
+    if (score >= 35) return 'moderate';
+    if (score >= 20) return 'low';
+    return 'none';
+  };
+
+  // Drift risk badge colors
+  const getDriftBadgeStyle = (level: DriftRiskLevel): React.CSSProperties => {
+    if (level === 'high') return { background: '#ef4444', color: '#fff' };
+    if (level === 'moderate') return { background: '#f59e0b', color: '#fff' };
+    if (level === 'low') return { background: '#3b82f6', color: '#fff' };
+    return {};
+  };
+
   return (
     <div style={styles.container}>
       {/* Glassmorphism Background */}
@@ -250,7 +174,7 @@ const GlobalForecastBar: React.FC<GlobalForecastBarProps> = ({ forecast, realtim
         )}
         <div style={styles.currentStatsRow}>
           <div style={styles.statItem}>
-            <Wind size={16} weight="thin" color="#64748b" />
+            <WindIcon size={16} color="#64748b" />
             <span style={styles.statValue}>
               {Math.round(realtime?.windSpeed ?? current.wind_gusts_10m ?? 0)}
             </span>
@@ -305,6 +229,7 @@ const GlobalForecastBar: React.FC<GlobalForecastBarProps> = ({ forecast, realtim
                   const timeStr = hourLabel === 0 ? '12 AM' : hourLabel < 12 ? `${hourLabel} AM` : hourLabel === 12 ? '12 PM' : `${hourLabel - 12} PM`;
                   const weatherDesc = ecHour.condition;
                   const isSnowy = ecHour.condition.toLowerCase().includes('snow') || ecHour.condition.toLowerCase().includes('flurr');
+                  const driftRisk = getHourlyDriftRisk(windGust, isSnowy, temp);
 
                   const handleClick = () => {
                     setSelectedIndex(i);
@@ -328,12 +253,24 @@ const GlobalForecastBar: React.FC<GlobalForecastBarProps> = ({ forecast, realtim
                         ...(isSelected ? styles.hourCardSelected : {}),
                         cursor: 'pointer'
                       }}
-                      title={`${timeStr}: ${weatherDesc}, ${Math.round(temp)}°C, ${precipChance}% precip, Wind ${Math.round(windGust)}km/h`}
+                      title={`${timeStr}: ${weatherDesc}, ${Math.round(temp)}°C, ${precipChance}% precip, Wind ${Math.round(windGust)}km/h${driftRisk !== 'none' ? `, Drift: ${driftRisk}` : ''}`}
                     >
                       <div style={styles.hourTime}>{timeStr}</div>
                       <div style={styles.hourIcon}>
                         {getWeatherIconByCode(weatherCode, hourLabel, 32)}
                       </div>
+                      {/* Drift Risk Badge */}
+                      {driftRisk !== 'none' && (
+                        <div
+                          style={{
+                            ...styles.driftBadge,
+                            ...getDriftBadgeStyle(driftRisk)
+                          }}
+                          title={`Drift Risk: ${driftRisk.charAt(0).toUpperCase() + driftRisk.slice(1)}`}
+                        >
+                          <BlowingSnowIconUI size={10} color="#fff" />
+                        </div>
+                      )}
                       <div style={styles.hourTemp}>{Math.round(temp)}°</div>
 
                       {/* Precipitation Chance Bar (instead of snow bar) */}
@@ -362,7 +299,7 @@ const GlobalForecastBar: React.FC<GlobalForecastBarProps> = ({ forecast, realtim
                       </div>
 
                       <div style={styles.windSpeed}>
-                        <Wind size={12} weight="thin" color="#94a3b8" />
+                        <WindIcon size={12} color="#94a3b8" />
                         <span style={{ marginLeft: '2px' }}>{Math.round(windGust)}</span>
                       </div>
                     </div>
@@ -382,6 +319,8 @@ const GlobalForecastBar: React.FC<GlobalForecastBarProps> = ({ forecast, realtim
                   const isSelected = view === '24h' && selectedIndex === i;
                   const timeStr = hourLabel === 0 ? '12 AM' : hourLabel < 12 ? `${hourLabel} AM` : hourLabel === 12 ? '12 PM' : `${hourLabel - 12} PM`;
                   const weatherDesc = getWeatherDescription(weatherCode);
+                  const isSnowy = snow > 0.1 || (weatherCode !== undefined && weatherCode >= 71 && weatherCode <= 77);
+                  const driftRisk = getHourlyDriftRisk(wind, isSnowy, temp);
 
                   const handleClick = () => {
                     setSelectedIndex(i);
@@ -399,18 +338,30 @@ const GlobalForecastBar: React.FC<GlobalForecastBarProps> = ({ forecast, realtim
                     <div
                       key={time}
                       onClick={handleClick}
-                      style={{ 
-                        ...styles.hourCard, 
+                      style={{
+                        ...styles.hourCard,
                         ...(isNow ? styles.hourCardNow : {}),
                         ...(isSelected ? styles.hourCardSelected : {}),
                         cursor: 'pointer'
                       }}
-                      title={`${timeStr}: ${weatherDesc}, ${Math.round(temp)}°C, ${snow > 0 ? snow.toFixed(1) + 'cm snow, ' : ''}Wind ${Math.round(wind)}km/h`}
+                      title={`${timeStr}: ${weatherDesc}, ${Math.round(temp)}°C, ${snow > 0 ? snow.toFixed(1) + 'cm snow, ' : ''}Wind ${Math.round(wind)}km/h${driftRisk !== 'none' ? `, Drift: ${driftRisk}` : ''}`}
                     >
                       <div style={styles.hourTime}>{timeStr}</div>
                       <div style={styles.hourIcon}>
                         {getWeatherIconByCode(weatherCode, hourLabel, 32)}
                       </div>
+                      {/* Drift Risk Badge */}
+                      {driftRisk !== 'none' && (
+                        <div
+                          style={{
+                            ...styles.driftBadge,
+                            ...getDriftBadgeStyle(driftRisk)
+                          }}
+                          title={`Drift Risk: ${driftRisk.charAt(0).toUpperCase() + driftRisk.slice(1)}`}
+                        >
+                          <BlowingSnowIconUI size={10} color="#fff" />
+                        </div>
+                      )}
                       <div style={styles.hourTemp}>{Math.round(temp)}°</div>
 
                       <div style={styles.snowBarWrapper}>
@@ -438,7 +389,7 @@ const GlobalForecastBar: React.FC<GlobalForecastBarProps> = ({ forecast, realtim
                       </div>
 
                       <div style={styles.windSpeed}>
-                        <Wind size={12} weight="thin" color="#94a3b8" />
+                        <WindIcon size={12} color="#94a3b8" />
                         <span style={{ marginLeft: '2px' }}>{Math.round(wind)}</span>
                       </div>
                     </div>
@@ -790,6 +741,17 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 500,
     position: 'relative',
     zIndex: 1
+  },
+  driftBadge: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '2px 4px',
+    borderRadius: '4px',
+    fontSize: '8px',
+    fontWeight: 700,
+    marginTop: '-4px',
+    marginBottom: '-4px'
   }
 };
 

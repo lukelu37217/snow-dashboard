@@ -1,11 +1,5 @@
 
-import React, { useState, useRef } from 'react';
-import { 
-  Wind, 
-  CloudSnow, 
-  Sun, 
-  Cloud 
-} from 'phosphor-react';
+import React, { useState } from 'react';
 import type { DetailedForecast } from '../../services/weatherService';
 
 interface GlobalForecastBarProps {

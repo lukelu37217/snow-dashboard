@@ -18,7 +18,7 @@ import type { WeatherData } from '../../services/weatherService';
 import { CLIENT_PROPERTIES, type ClientProperty } from '../../config/clientProperties';
 import { getZoneStatus, getZoneColor, getZoneLevel } from '../../utils/zoneStatusHelper';
 import type { SyntheticZone } from '../../utils/syntheticZones';
-import { isInOperationalArea } from '../../config/westernSector';
+import { isInOperationalArea, WESTERN_SECTOR_BOUNDS } from '../../config/westernSector';
 
 // Fix Leaflet default icon issue (prevents broken default markers)
 // @ts-ignore
@@ -234,19 +234,29 @@ const RadarTimelineSlider: React.FC<{
     );
 };
 
-// RainViewer Radar Layer Component
+// Layer mode type for RainViewer
+type RadarLayerMode = 'radar' | 'satellite' | 'both';
+
+// RainViewer Radar Layer Component with Satellite Support
 const RainViewerRadar: React.FC<{ enabled: boolean }> = ({ enabled }) => {
     const map = useMap();
     const radarLayersRef = useRef<L.TileLayer[]>([]);
+    const satelliteLayersRef = useRef<L.TileLayer[]>([]);
     const [frames, setFrames] = useState<RainViewerFrame[]>([]);
+    const [satelliteFrames, setSatelliteFrames] = useState<RainViewerFrame[]>([]);
     const [currentFrame, setCurrentFrame] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const animationRef = useRef<number | null>(null);
     const lastFrameTimeRef = useRef<number>(0);
     const [isPlaying, setIsPlaying] = useState(true);
+    const [layerMode, setLayerMode] = useState<RadarLayerMode>('radar');
 
     const handlePlayPauseToggle = useCallback(() => {
         setIsPlaying(prev => !prev);
+    }, []);
+
+    const handleLayerModeChange = useCallback((mode: RadarLayerMode) => {
+        setLayerMode(mode);
     }, []);
 
     // Color scheme: 2 = Universal Blue (matches Apple/Dark aesthetic)
@@ -255,21 +265,25 @@ const RainViewerRadar: React.FC<{ enabled: boolean }> = ({ enabled }) => {
     const smoothing = 1; // Enable smooth radar rendering
     const snow = 1; // Show snow detection
 
-    // Fetch RainViewer API data
+    // Fetch RainViewer API data (radar + satellite)
     const fetchRadarData = useCallback(async () => {
         try {
             setIsLoading(true);
             const response = await fetch('https://api.rainviewer.com/public/weather-maps.json');
-            const data: RainViewerData = await response.json();
+            const data = await response.json();
 
             // Combine ALL past frames (up to 6 hours / 36 frames) with nowcast for extended timeline
             // RainViewer typically provides 2-3 hours of past data, we take all available
-            const allFrames = [
+            const radarFrames = [
                 ...data.radar.past,  // All available past frames (typically 12-15 frames)
                 ...data.radar.nowcast.slice(0, 6)  // Up to 1 hour forecast
             ];
 
-            setFrames(allFrames);
+            // Satellite/infrared frames (if available)
+            const satFrames = data.satellite?.infrared || [];
+
+            setFrames(radarFrames);
+            setSatelliteFrames(satFrames);
             setIsLoading(false);
         } catch (error) {
             console.error('Failed to fetch RainViewer data:', error);
@@ -293,28 +307,31 @@ const RainViewerRadar: React.FC<{ enabled: boolean }> = ({ enabled }) => {
         const radarPane = map.getPane('radarPane');
         if (!radarPane) return;
 
-        // Clear existing layers
+        // Clear existing radar layers
         radarLayersRef.current.forEach(layer => {
             if (map.hasLayer(layer)) map.removeLayer(layer);
         });
         radarLayersRef.current = [];
 
-        // Create tile layers for each frame
-        frames.forEach((frame, index) => {
-            const layer = L.tileLayer(
-                `https://tilecache.rainviewer.com${frame.path}/256/{z}/{x}/{y}/${colorScheme}/${smoothing}_${snow}.png`,
-                {
-                    pane: 'radarPane',
-                    opacity: index === 0 ? 0.6 : 0,
-                    tileSize: 256,
-                    className: 'radar-tile-layer',
-                    maxZoom: 18,
-                    maxNativeZoom: 15  // RainViewer max native, but upscale to 18
-                }
-            );
-            layer.addTo(map);
-            radarLayersRef.current.push(layer);
-        });
+        // Only create radar layers if mode includes radar
+        if (layerMode === 'radar' || layerMode === 'both') {
+            const radarOpacity = layerMode === 'both' ? 0.5 : 0.6;
+            frames.forEach((frame, index) => {
+                const layer = L.tileLayer(
+                    `https://tilecache.rainviewer.com${frame.path}/256/{z}/{x}/{y}/${colorScheme}/${smoothing}_${snow}.png`,
+                    {
+                        pane: 'radarPane',
+                        opacity: index === 0 ? radarOpacity : 0,
+                        tileSize: 256,
+                        className: 'radar-tile-layer',
+                        maxZoom: 18,
+                        maxNativeZoom: 15  // RainViewer max native, but upscale to 18
+                    }
+                );
+                layer.addTo(map);
+                radarLayersRef.current.push(layer);
+            });
+        }
 
         return () => {
             radarLayersRef.current.forEach(layer => {
@@ -322,11 +339,61 @@ const RainViewerRadar: React.FC<{ enabled: boolean }> = ({ enabled }) => {
             });
             radarLayersRef.current = [];
         };
-    }, [map, frames, enabled, colorScheme, smoothing, snow]);
+    }, [map, frames, enabled, colorScheme, smoothing, snow, layerMode]);
 
-    // Smooth animation loop - respects isPlaying state
+    // Pre-load satellite frames
     useEffect(() => {
-        if (!enabled || frames.length === 0 || radarLayersRef.current.length === 0) {
+        if (!enabled || satelliteFrames.length === 0) return;
+        if (layerMode !== 'satellite' && layerMode !== 'both') {
+            // Clean up satellite layers if not needed
+            satelliteLayersRef.current.forEach(layer => {
+                if (map.hasLayer(layer)) map.removeLayer(layer);
+            });
+            satelliteLayersRef.current = [];
+            return;
+        }
+
+        const radarPane = map.getPane('radarPane');
+        if (!radarPane) return;
+
+        // Clear existing satellite layers
+        satelliteLayersRef.current.forEach(layer => {
+            if (map.hasLayer(layer)) map.removeLayer(layer);
+        });
+        satelliteLayersRef.current = [];
+
+        const satOpacity = layerMode === 'both' ? 0.4 : 0.5;
+        satelliteFrames.forEach((frame, index) => {
+            const layer = L.tileLayer(
+                `https://tilecache.rainviewer.com${frame.path}/256/{z}/{x}/{y}/0/0_0.png`,
+                {
+                    pane: 'radarPane',
+                    opacity: index === 0 ? satOpacity : 0,
+                    tileSize: 256,
+                    className: 'satellite-tile-layer',
+                    maxZoom: 18,
+                    maxNativeZoom: 12
+                }
+            );
+            layer.addTo(map);
+            satelliteLayersRef.current.push(layer);
+        });
+
+        return () => {
+            satelliteLayersRef.current.forEach(layer => {
+                if (map.hasLayer(layer)) map.removeLayer(layer);
+            });
+            satelliteLayersRef.current = [];
+        };
+    }, [map, satelliteFrames, enabled, layerMode]);
+
+    // Smooth animation loop - respects isPlaying state and layerMode
+    useEffect(() => {
+        const hasRadarLayers = radarLayersRef.current.length > 0;
+        const hasSatLayers = satelliteLayersRef.current.length > 0;
+        const hasAnyLayers = hasRadarLayers || hasSatLayers;
+
+        if (!enabled || frames.length === 0 || !hasAnyLayers) {
             if (animationRef.current) {
                 cancelAnimationFrame(animationRef.current);
                 animationRef.current = null;
@@ -344,30 +411,59 @@ const RainViewerRadar: React.FC<{ enabled: boolean }> = ({ enabled }) => {
         }
 
         const frameDuration = 800; // ms per frame
+        const radarOpacity = layerMode === 'both' ? 0.5 : 0.6;
+        const satOpacity = layerMode === 'both' ? 0.4 : 0.5;
 
         const animate = (timestamp: number) => {
             if (timestamp - lastFrameTimeRef.current >= frameDuration) {
                 lastFrameTimeRef.current = timestamp;
 
-                const currentLayer = radarLayersRef.current[currentFrame];
                 const nextFrame = (currentFrame + 1) % frames.length;
-                const nextLayer = radarLayersRef.current[nextFrame];
 
-                if (currentLayer && nextLayer) {
-                    // Smooth cross-fade
-                    let fadeProgress = 0;
-                    const fadeStep = () => {
-                        fadeProgress += 0.15;
-                        if (fadeProgress <= 1) {
-                            currentLayer.setOpacity(0.6 * (1 - fadeProgress));
-                            nextLayer.setOpacity(0.6 * fadeProgress);
-                            requestAnimationFrame(fadeStep);
-                        } else {
-                            currentLayer.setOpacity(0);
-                            nextLayer.setOpacity(0.6);
-                        }
-                    };
-                    fadeStep();
+                // Animate radar layers
+                if ((layerMode === 'radar' || layerMode === 'both') && hasRadarLayers) {
+                    const currentRadar = radarLayersRef.current[currentFrame];
+                    const nextRadar = radarLayersRef.current[nextFrame];
+
+                    if (currentRadar && nextRadar) {
+                        let fadeProgress = 0;
+                        const fadeStep = () => {
+                            fadeProgress += 0.15;
+                            if (fadeProgress <= 1) {
+                                currentRadar.setOpacity(radarOpacity * (1 - fadeProgress));
+                                nextRadar.setOpacity(radarOpacity * fadeProgress);
+                                requestAnimationFrame(fadeStep);
+                            } else {
+                                currentRadar.setOpacity(0);
+                                nextRadar.setOpacity(radarOpacity);
+                            }
+                        };
+                        fadeStep();
+                    }
+                }
+
+                // Animate satellite layers (use same frame index, may have different frame count)
+                if ((layerMode === 'satellite' || layerMode === 'both') && hasSatLayers) {
+                    const satFrameIdx = currentFrame % satelliteLayersRef.current.length;
+                    const nextSatFrameIdx = nextFrame % satelliteLayersRef.current.length;
+                    const currentSat = satelliteLayersRef.current[satFrameIdx];
+                    const nextSat = satelliteLayersRef.current[nextSatFrameIdx];
+
+                    if (currentSat && nextSat && satFrameIdx !== nextSatFrameIdx) {
+                        let fadeProgress = 0;
+                        const fadeStep = () => {
+                            fadeProgress += 0.15;
+                            if (fadeProgress <= 1) {
+                                currentSat.setOpacity(satOpacity * (1 - fadeProgress));
+                                nextSat.setOpacity(satOpacity * fadeProgress);
+                                requestAnimationFrame(fadeStep);
+                            } else {
+                                currentSat.setOpacity(0);
+                                nextSat.setOpacity(satOpacity);
+                            }
+                        };
+                        fadeStep();
+                    }
                 }
 
                 setCurrentFrame(nextFrame);
@@ -383,7 +479,7 @@ const RainViewerRadar: React.FC<{ enabled: boolean }> = ({ enabled }) => {
                 cancelAnimationFrame(animationRef.current);
             }
         };
-    }, [enabled, frames, currentFrame, isPlaying]);
+    }, [enabled, frames, satelliteFrames, currentFrame, isPlaying, layerMode]);
 
     // Cleanup when disabled
     useEffect(() => {
@@ -392,7 +488,12 @@ const RainViewerRadar: React.FC<{ enabled: boolean }> = ({ enabled }) => {
                 if (map.hasLayer(layer)) map.removeLayer(layer);
             });
             radarLayersRef.current = [];
+            satelliteLayersRef.current.forEach(layer => {
+                if (map.hasLayer(layer)) map.removeLayer(layer);
+            });
+            satelliteLayersRef.current = [];
             setFrames([]);
+            setSatelliteFrames([]);
             setCurrentFrame(0);
         }
     }, [enabled, map]);
@@ -433,6 +534,44 @@ const RainViewerRadar: React.FC<{ enabled: boolean }> = ({ enabled }) => {
                     isPlaying={isPlaying}
                     onPlayPauseToggle={handlePlayPauseToggle}
                 />
+            )}
+
+            {/* Layer Mode Toggle (Radar / Satellite / Both) */}
+            {!isLoading && (
+                <div style={{
+                    position: 'absolute',
+                    top: '70px',
+                    left: '16px',
+                    backgroundColor: 'rgba(255,255,255,0.95)',
+                    borderRadius: '8px',
+                    padding: '4px',
+                    zIndex: 1001,
+                    display: 'flex',
+                    gap: '2px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    border: '1px solid rgba(0,0,0,0.1)'
+                }}>
+                    {(['radar', 'satellite', 'both'] as RadarLayerMode[]).map(mode => (
+                        <button
+                            key={mode}
+                            onClick={() => handleLayerModeChange(mode)}
+                            style={{
+                                padding: '6px 12px',
+                                border: 'none',
+                                borderRadius: '6px',
+                                backgroundColor: layerMode === mode ? '#3b82f6' : 'transparent',
+                                color: layerMode === mode ? '#fff' : '#6b7280',
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                textTransform: 'capitalize'
+                            }}
+                        >
+                            {mode === 'both' ? 'Both' : mode === 'satellite' ? 'Clouds' : 'Radar'}
+                        </button>
+                    ))}
+                </div>
             )}
 
             {/* RainViewer Attribution (Required) */}
@@ -539,6 +678,46 @@ const featureContainsClientProperty = (feature: any): boolean => {
         }
     }
     return false;
+};
+
+// Western Sector Background Fill
+// Renders a subtle background rectangle covering the operational area
+// Helps reduce visible gaps between zone polygons
+const WesternSectorBackground: React.FC = () => {
+    const map = useMap();
+    const layerRef = useRef<L.Rectangle | null>(null);
+
+    useEffect(() => {
+        if (layerRef.current) {
+            map.removeLayer(layerRef.current);
+        }
+
+        // Create a rectangle covering the Western Sector bounds
+        const bounds: L.LatLngBoundsExpression = [
+            [WESTERN_SECTOR_BOUNDS.south, WESTERN_SECTOR_BOUNDS.west],
+            [WESTERN_SECTOR_BOUNDS.north, WESTERN_SECTOR_BOUNDS.east]
+        ];
+
+        const rectangle = L.rectangle(bounds, {
+            color: '#e2e8f0',      // Border color (subtle gray)
+            weight: 1,
+            opacity: 0.3,
+            fillColor: '#f1f5f9',  // Fill color (very light gray-blue)
+            fillOpacity: 0.15,     // Very subtle fill
+            pane: 'districtPane'   // Same pane as districts but drawn first
+        });
+
+        rectangle.addTo(map);
+        layerRef.current = rectangle;
+
+        return () => {
+            if (layerRef.current) {
+                map.removeLayer(layerRef.current);
+            }
+        };
+    }, [map]);
+
+    return null;
 };
 
 // District GeoJSON Layer with Custom Pane - 3-TIER VISUAL HIERARCHY
@@ -1010,6 +1189,9 @@ const SnowMap: React.FC<SnowMapProps> = ({
 
             {/* Layer 2: RainViewer Radar (radarPane, zIndex: 400) */}
             <RainViewerRadar enabled={showRadar} />
+
+            {/* Layer 2.5: Western Sector Background Fill (reduces visual gaps) */}
+            <WesternSectorBackground />
 
             {/* Layer 3: District Polygons (districtPane, zIndex: 500) - FOCUS MODE */}
             {geoJsonData && (

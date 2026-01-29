@@ -52,6 +52,14 @@ export interface SnowRemovalStatus {
     next3hSnowfall: number;
 }
 
+export type DriftRiskLevel = 'none' | 'low' | 'moderate' | 'high';
+
+export interface DriftRiskInfo {
+    level: DriftRiskLevel;
+    percent: number; // 0-100
+    factors: string[]; // e.g. ["Wind 45km/h", "Fresh snow 2.3cm", "Temp -12°C"]
+}
+
 export interface WeatherData {
     id: string;
     temperature: number;
@@ -63,6 +71,9 @@ export interface WeatherData {
 
     // New Extended Status
     snowRemoval?: SnowRemovalStatus;
+
+    // Drift Risk (Blowing Snow)
+    driftRisk?: DriftRiskInfo;
 }
 
 export interface DetailedForecast {
@@ -147,6 +158,103 @@ const calculateSnowRemoval = (hourly: any, snowAccum24h: number = 0): SnowRemova
         snowDepthCm,
         recent3hSnowfall: recent3h,
         next3hSnowfall: next3h
+    };
+};
+
+/**
+ * Calculate Drift Risk (Blowing Snow Risk)
+ *
+ * Factors that contribute to drifting snow:
+ * 1. Wind Speed: High winds pick up and transport snow
+ *    - Drifting starts around 25-30 km/h with fresh snow
+ *    - Severe drifting above 40 km/h
+ * 2. Fresh Snow: Recently fallen snow is lighter and more prone to drifting
+ *    - Snow older than 48h typically crusts over
+ * 3. Temperature: Colder temps = drier, lighter snow = more drifting
+ *    - Below -5°C: High drift potential
+ *    - -5°C to 0°C: Moderate drift potential
+ *    - Above 0°C: Low (wet, heavy snow)
+ *
+ * Risk Levels:
+ * - High: Wind > 40km/h + fresh snow > 0.5cm + temp < -5°C
+ * - Moderate: Wind > 30km/h + fresh snow > 0.2cm + temp < 0°C
+ * - Low: Wind > 25km/h + fresh snow > 0.1cm
+ * - None: Otherwise
+ */
+const calculateDriftRisk = (
+    windGusts: number,
+    pastSnow24h: number,
+    temperature: number
+): DriftRiskInfo => {
+    const factors: string[] = [];
+    let riskScore = 0;
+
+    // Wind factor (0-40 points)
+    if (windGusts >= 50) {
+        riskScore += 40;
+        factors.push(`Strong gusts ${Math.round(windGusts)}km/h`);
+    } else if (windGusts >= 40) {
+        riskScore += 30;
+        factors.push(`Gusts ${Math.round(windGusts)}km/h`);
+    } else if (windGusts >= 30) {
+        riskScore += 20;
+        factors.push(`Wind ${Math.round(windGusts)}km/h`);
+    } else if (windGusts >= 25) {
+        riskScore += 10;
+        factors.push(`Breezy ${Math.round(windGusts)}km/h`);
+    }
+
+    // Fresh snow factor (0-35 points)
+    if (pastSnow24h >= 5) {
+        riskScore += 35;
+        factors.push(`Heavy snow ${pastSnow24h.toFixed(1)}cm`);
+    } else if (pastSnow24h >= 2) {
+        riskScore += 25;
+        factors.push(`Fresh snow ${pastSnow24h.toFixed(1)}cm`);
+    } else if (pastSnow24h >= 0.5) {
+        riskScore += 15;
+        factors.push(`Light snow ${pastSnow24h.toFixed(1)}cm`);
+    } else if (pastSnow24h >= 0.1) {
+        riskScore += 5;
+        factors.push(`Trace snow`);
+    }
+
+    // Temperature factor (0-25 points) - colder = more drifting
+    if (temperature < -15) {
+        riskScore += 25;
+        factors.push(`Very cold ${Math.round(temperature)}°C`);
+    } else if (temperature < -10) {
+        riskScore += 20;
+        factors.push(`Cold ${Math.round(temperature)}°C`);
+    } else if (temperature < -5) {
+        riskScore += 15;
+        factors.push(`Temp ${Math.round(temperature)}°C`);
+    } else if (temperature < 0) {
+        riskScore += 5;
+        // Only add if near freezing and other factors present
+        if (riskScore > 10) factors.push(`Near freezing`);
+    }
+    // Above 0°C: wet snow, no drift bonus
+
+    // Determine risk level based on score (max 100)
+    let level: DriftRiskLevel;
+    if (riskScore >= 60) {
+        level = 'high';
+    } else if (riskScore >= 35) {
+        level = 'moderate';
+    } else if (riskScore >= 15) {
+        level = 'low';
+    } else {
+        level = 'none';
+    }
+
+    // Clamp percent to 0-100
+    const percent = Math.min(100, Math.max(0, riskScore));
+
+    return {
+        level,
+        percent,
+        factors: level === 'none' ? [] : factors
     };
 };
 
@@ -314,21 +422,26 @@ export const fetchWeatherBatch = async (locations: { id: string; lat: number; lo
             }
             
             const hasActiveSnow = snowAccum24h > 0.5;
-            
+            const temperature = -12 + Math.random() * 4; // -12 to -8°C (cold Winnipeg day)
+            const windGusts = 25 + Math.random() * 15; // 25-40 km/h
+
+            // Calculate drift risk for mock data
+            const driftRisk = calculateDriftRisk(windGusts, pastSnow24h, temperature);
+
             return {
                 id: loc.id,
-                temperature: -12 + Math.random() * 4, // -12 to -8°C (cold Winnipeg day)
+                temperature,
                 snowfall: hasActiveSnow ? 0.1 + Math.random() * 0.4 : 0, // current rate
                 apparentTemperature: -18 + Math.random() * 4,
-                windGusts: 25 + Math.random() * 15, // 25-40 km/h
+                windGusts,
                 snowAccumulation24h: snowAccum24h,
                 pastSnow24h: pastSnow24h,
                 snowRemoval: {
                     needsRemoval,
                     priority,
-                    reasons: snowAccum24h >= 5 
+                    reasons: snowAccum24h >= 5
                         ? [`24h: ${snowAccum24h.toFixed(1)}cm (Commercial)`]
-                        : snowAccum24h >= 1 
+                        : snowAccum24h >= 1
                             ? [`24h: ${snowAccum24h.toFixed(1)}cm (Residential)`]
                             : snowAccum24h >= 0.3
                                 ? [`24h: ${snowAccum24h.toFixed(1)}cm (Salting)`]
@@ -336,7 +449,8 @@ export const fetchWeatherBatch = async (locations: { id: string; lat: number; lo
                     snowDepthCm: pastSnow24h * 0.85, // Use past snow for depth
                     recent3hSnowfall: hasActiveSnow ? 0.2 + Math.random() * 0.8 : 0,
                     next3hSnowfall: hasActiveSnow ? 0.3 + Math.random() * 1.2 : 0
-                }
+                },
+                driftRisk
             };
         });
         
@@ -411,6 +525,13 @@ export const fetchWeatherBatch = async (locations: { id: string; lat: number; lo
                 // Use PAST 24h for removal status (what has actually fallen)
                 const removalStatus = calculateSnowRemoval(hourly, past24hSnow);
 
+                // Calculate drift risk
+                const driftRisk = calculateDriftRisk(
+                    current.wind_gusts_10m || 0,
+                    past24hSnow,
+                    current.temperature_2m || 0
+                );
+
                 results.push({
                     id: loc.id,
                     temperature: current.temperature_2m || 0,
@@ -419,7 +540,8 @@ export const fetchWeatherBatch = async (locations: { id: string; lat: number; lo
                     windGusts: current.wind_gusts_10m || 0,
                     snowAccumulation24h: next24hSnow,  // Future forecast
                     pastSnow24h: past24hSnow,          // Actual past accumulation
-                    snowRemoval: removalStatus
+                    snowRemoval: removalStatus,
+                    driftRisk
                 });
             });
 
@@ -435,7 +557,8 @@ export const fetchWeatherBatch = async (locations: { id: string; lat: number; lo
                     windGusts: 0,
                     snowAccumulation24h: 0,
                     pastSnow24h: 0,
-                    snowRemoval: { needsRemoval: false, priority: 'low', reasons: [], snowDepthCm: 0, recent3hSnowfall: 0, next3hSnowfall: 0 }
+                    snowRemoval: { needsRemoval: false, priority: 'low', reasons: [], snowDepthCm: 0, recent3hSnowfall: 0, next3hSnowfall: 0 },
+                    driftRisk: { level: 'none', percent: 0, factors: [] }
                 });
             });
         }

@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import './App.css';
 import SnowMap from './components/Map/SnowMap';
 import NeighborhoodDetail from './components/Weather/NeighborhoodDetail';
@@ -7,9 +7,11 @@ import GlobalForecastBar from './components/Weather/GlobalForecastBarApple';
 import Header from './components/Dashboard/Header';
 import MetricsCards from './components/Dashboard/MetricsCards';
 import PropertyList from './components/Dashboard/PropertyList';
+import AlertBanner from './components/Dashboard/AlertBanner';
 import MobileDriverMode from './components/Mobile/MobileDriverMode';
-import { LayersIcon } from './components/Icons/Icons';
+import { LayersIcon, BellIcon, BellOffIcon } from './components/Icons/Icons';
 import useMobile from './hooks/useMobile';
+import { notificationService, type SnowAlert } from './services/notificationService';
 
 import { getCentroid } from './services/geoUtils';
 import {
@@ -56,7 +58,46 @@ function App() {
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null); // Track selected property
   const [showRadar, setShowRadar] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string>("--:--");
-  
+
+  // Notification state
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [activeAlerts, setActiveAlerts] = useState<SnowAlert[]>([]);
+
+  // Initialize notification service
+  useEffect(() => {
+    notificationService.init().then(enabled => {
+      setNotificationsEnabled(enabled);
+    });
+
+    // Subscribe to alerts
+    const unsubscribe = notificationService.onAlert((alert) => {
+      setActiveAlerts(prev => [...prev, alert]);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Handle notification toggle
+  const handleNotificationToggle = useCallback(async () => {
+    if (notificationsEnabled) {
+      notificationService.setEnabled(false);
+      setNotificationsEnabled(false);
+    } else {
+      const granted = await notificationService.requestPermission();
+      setNotificationsEnabled(granted);
+    }
+  }, [notificationsEnabled]);
+
+  // Dismiss alert handler
+  const handleDismissAlert = useCallback((alertId: string) => {
+    setActiveAlerts(prev => prev.filter(a => a.id !== alertId));
+  }, []);
+
+  // Dismiss all alerts
+  const handleDismissAllAlerts = useCallback(() => {
+    setActiveAlerts([]);
+  }, []);
+
   // Mobile-specific state - Driver Mode uses its own internal state
 
   const refreshData = async (forceRefresh = false) => {
@@ -154,6 +195,24 @@ function App() {
       setEcForecast(ecHourly);
 
       setLastUpdated(new Date().toLocaleTimeString());
+
+      // 5. Process notifications if enabled
+      if (notificationsEnabled && weatherMap.size > 0) {
+        // Build zone names map from geoData
+        const zoneNames = new Map<string, string>();
+        if (geoData) {
+          geoData.features.forEach((f: any) => {
+            zoneNames.set(f.properties.id, f.properties.name);
+          });
+        }
+        // Add synthetic zone names
+        syntheticZones.forEach(z => {
+          zoneNames.set(z.id, z.name);
+        });
+
+        // Check for alerts
+        await notificationService.processAlerts(weatherMap, zoneNames);
+      }
 
     } catch (e) {
       console.error("Refresh failed", e);
@@ -358,6 +417,13 @@ function App() {
       {/* Header */}
       <Header lastUpdated={lastUpdated} onRefresh={() => refreshData(true)} />
 
+      {/* Alert Banner - Shows push notification alerts */}
+      <AlertBanner
+        alerts={activeAlerts}
+        onDismiss={handleDismissAlert}
+        onDismissAll={handleDismissAllAlerts}
+      />
+
       <div style={{ flex: 1, display: 'flex', height: 'calc(100vh - 60px)' }}>
 
         {/* Desktop Sidebar */}
@@ -427,6 +493,45 @@ function App() {
             <LayersIcon size={18} color={showRadar ? '#3b82f6' : '#64748b'} />
             <span style={{ color: showRadar ? '#3b82f6' : '#1e293b' }}>
               {showRadar ? 'Hide Radar' : 'Show Radar'}
+            </span>
+          </button>
+
+          {/* Notification Toggle Button */}
+          <button
+            style={{
+              position: 'absolute',
+              top: '16px',
+              right: '160px',
+              zIndex: 1000,
+              backgroundColor: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '10px 16px',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              transition: 'all 0.2s ease'
+            }}
+            onClick={handleNotificationToggle}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#f1f5f9';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'white';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+            title={notificationsEnabled ? 'Disable notifications' : 'Enable notifications'}
+          >
+            {notificationsEnabled
+              ? <BellIcon size={18} color="#3b82f6" />
+              : <BellOffIcon size={18} color="#64748b" />
+            }
+            <span style={{ color: notificationsEnabled ? '#3b82f6' : '#1e293b' }}>
+              {notificationsEnabled ? 'Alerts On' : 'Alerts Off'}
             </span>
           </button>
 

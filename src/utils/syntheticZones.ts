@@ -12,9 +12,10 @@
 
 import { CLIENT_PROPERTIES, type ClientProperty } from '../config/clientProperties';
 
-// Radius in degrees (approximately 500m at Winnipeg's latitude)
-// 1 degree latitude ≈ 111km, so 500m ≈ 0.0045 degrees
-const BUBBLE_RADIUS_DEG = 0.0045;
+// Radius in degrees (approximately 660m at Winnipeg's latitude)
+// 1 degree latitude ≈ 111km, so 660m ≈ 0.006 degrees
+// Increased from 500m to reduce gaps between coverage areas
+const BUBBLE_RADIUS_DEG = 0.006;
 const CIRCLE_POINTS = 32; // Points to create circle polygon
 
 export interface SyntheticZone {
@@ -135,14 +136,14 @@ export const generateSyntheticZones = (geoJsonFeatures: any[]): SyntheticZone[] 
     for (const prop of orphans) {
         if (assigned.has(prop.id)) continue;
         
-        // Find all orphans within ~1km of this one
+        // Find all orphans within ~1.5km of this one (increased from 1km for better coverage)
         const nearby = orphans.filter(other => {
             if (assigned.has(other.id)) return false;
             const dist = Math.sqrt(
-                Math.pow((prop.lat - other.lat) * 111, 2) + 
+                Math.pow((prop.lat - other.lat) * 111, 2) +
                 Math.pow((prop.lng - other.lng) * 85, 2) // Adjusted for latitude
             );
-            return dist < 1; // Within 1km
+            return dist < 1.5; // Within 1.5km (increased for better clustering)
         });
         
         // Create group key based on street name
