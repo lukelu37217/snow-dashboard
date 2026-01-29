@@ -7,19 +7,13 @@ import GlobalForecastBar from './components/Weather/GlobalForecastBarApple';
 import Header from './components/Dashboard/Header';
 import MetricsCards from './components/Dashboard/MetricsCards';
 import PropertyList from './components/Dashboard/PropertyList';
-<<<<<<< HEAD
 import AlertBanner from './components/Dashboard/AlertBanner';
-import MobileDriverMode from './components/Mobile/MobileDriverMode';
-import { LayersIcon, BellIcon, BellOffIcon } from './components/Icons/Icons';
-import useMobile from './hooks/useMobile';
-import { notificationService, type SnowAlert } from './services/notificationService';
-=======
 import MobileDriverModeFinal from './components/Mobile/MobileDriverModeFinal';
-import { LayersIcon } from './components/Icons/Icons';
+import { LayersIcon, BellIcon, BellOffIcon } from './components/Icons/Icons';
 import useMobile from './hooks/useMobile';
 import { useDeviceInfo } from './hooks/useDeviceInfo';
 import { flyToProperty } from './utils/mapHelpers';
->>>>>>> origin/main
+import { notificationService, type SnowAlert } from './services/notificationService';
 
 import { getCentroid } from './services/geoUtils';
 import {
@@ -586,3 +580,4 @@ function App() {
 }
 
 export default App;
+
