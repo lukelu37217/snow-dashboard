@@ -18,6 +18,15 @@ import type { WeatherData } from '../../services/weatherService';
 import { CLIENT_PROPERTIES, getPropertiesGroupedByZone, type ClientProperty } from '../../config/clientProperties';
 import { getZoneStatus } from '../../utils/zoneStatusHelper';
 
+// Wind/Drift Icon
+const WindIcon: React.FC<{ size?: number; color?: string }> = ({ size = 14, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2" />
+    <path d="M9.6 4.6A2 2 0 1 1 11 8H2" />
+    <path d="M12.6 19.4A2 2 0 1 0 14 16H2" />
+  </svg>
+);
+
 interface PropertyListProps {
     weatherData: Map<string, WeatherData>;
     geoJsonData: any;
@@ -51,13 +60,14 @@ const PropertyList: React.FC<PropertyListProps> = ({
             properties: ClientProperty[];
             status: ReturnType<typeof getZoneStatus>;
             zoneId: string | undefined;
+            driftRisk?: WeatherData['driftRisk'];
         }> = [];
 
         grouped.forEach((properties, zoneName) => {
             const zoneId = getZoneIdFromName(zoneName);
             const data = zoneId ? weatherData.get(zoneId) : undefined;
             const status = getZoneStatus(data);
-            result.push({ zoneName, properties, status, zoneId });
+            result.push({ zoneName, properties, status, zoneId, driftRisk: data?.driftRisk });
         });
 
         // Sort by status level (high priority first), then alphabetically
@@ -207,11 +217,11 @@ const PropertyList: React.FC<PropertyListProps> = ({
                             <div
                                 onClick={() => handleZoneClick(group)}
                                 style={{
-                                    backgroundColor: hasSelectedProperty ? '#eff6ff' : '#f8fafc',
-                                    borderLeft: `4px solid ${group.status.color}`,
-                                    borderRight: hasSelectedProperty ? '3px solid #3b82f6' : 'none',
-                                    padding: '10px 12px',
-                                    borderRadius: '6px',
+                                    backgroundColor: hasSelectedProperty ? '#eff6ff' : '#fafafa',
+                                    borderLeft: `3px solid ${group.status.color}`,
+                                    borderRight: hasSelectedProperty ? '2px solid #3b82f6' : 'none',
+                                    padding: '14px 16px',
+                                    borderRadius: '8px',
                                     cursor: 'pointer',
                                     display: 'flex',
                                     justifyContent: 'space-between',
@@ -229,7 +239,7 @@ const PropertyList: React.FC<PropertyListProps> = ({
                                         ▶
                                     </span>
                                     <LocationIcon size={14} color={group.status.color} />
-                                    <span style={{ fontWeight: 600, fontSize: '0.85rem', color: '#1f2937' }}>
+                                    <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#334155' }}>
                                         {group.zoneName}
                                     </span>
                                     <span style={{
@@ -243,6 +253,26 @@ const PropertyList: React.FC<PropertyListProps> = ({
                                     </span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    {/* Drift Risk Warning */}
+                                    {group.driftRisk && (group.driftRisk.level === 'high' || group.driftRisk.level === 'moderate') && (
+                                        <span 
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '3px',
+                                                fontSize: '0.6rem',
+                                                color: group.driftRisk.level === 'high' ? '#dc2626' : '#d97706',
+                                                backgroundColor: group.driftRisk.level === 'high' ? '#fef2f2' : '#fffbeb',
+                                                padding: '2px 6px',
+                                                borderRadius: '4px',
+                                                fontWeight: 600
+                                            }}
+                                            title={group.driftRisk.factors.join(' | ')}
+                                        >
+                                            <WindIcon size={10} color={group.driftRisk.level === 'high' ? '#dc2626' : '#d97706'} />
+                                            Drift
+                                        </span>
+                                    )}
                                     <span style={{
                                         display: 'flex',
                                         alignItems: 'center',
@@ -253,16 +283,28 @@ const PropertyList: React.FC<PropertyListProps> = ({
                                         <SnowIcon size={10} color="#6b7280" />
                                         {group.status.snow24h.toFixed(1)}cm
                                     </span>
-                                    <span style={{
-                                        fontSize: '0.55rem',
-                                        color: 'white',
-                                        backgroundColor: group.status.color,
-                                        padding: '2px 5px',
-                                        borderRadius: '4px',
-                                        fontWeight: 600
-                                    }}>
-                                        {group.status.label}
-                                    </span>
+                                    {/* Only show colored badge for actionable statuses (Residential/Commercial) */}
+                                    {group.status.level >= 2 ? (
+                                        <span style={{
+                                            fontSize: '0.55rem',
+                                            color: 'white',
+                                            backgroundColor: group.status.color,
+                                            padding: '3px 8px',
+                                            borderRadius: '4px',
+                                            fontWeight: 600
+                                        }}>
+                                            {group.status.label}
+                                        </span>
+                                    ) : (
+                                        /* Subtle dot indicator for Clear/Trace */
+                                        <span style={{
+                                            width: '8px',
+                                            height: '8px',
+                                            borderRadius: '50%',
+                                            backgroundColor: group.status.color,
+                                            flexShrink: 0
+                                        }} />
+                                    )}
                                 </div>
                             </div>
 
@@ -283,18 +325,18 @@ const PropertyList: React.FC<PropertyListProps> = ({
                                                     onSelectProperty(property);
                                                 }}
                                                 style={{
-                                                    padding: '8px 12px',
+                                                    padding: '10px 14px',
                                                     marginLeft: '8px',
-                                                    marginBottom: '2px',
-                                                    backgroundColor: isSelected ? '#dbeafe' : 'white',
-                                                    borderRadius: '4px',
+                                                    marginBottom: '4px',
+                                                    backgroundColor: isSelected ? '#eff6ff' : '#ffffff',
+                                                    borderRadius: '6px',
                                                     cursor: 'pointer',
                                                     display: 'flex',
                                                     justifyContent: 'space-between',
                                                     alignItems: 'center',
-                                                    fontSize: '0.8rem',
-                                                    transition: 'all 0.2s',
-                                                    border: isSelected ? '1px solid #3b82f6' : '1px solid transparent'
+                                                    fontSize: '0.85rem',
+                                                    transition: 'all 0.15s ease',
+                                                    border: isSelected ? '1px solid #93c5fd' : '1px solid #f1f5f9'
                                                 }}
                                                 onMouseEnter={(e) => {
                                                     if (!isSelected) {
@@ -307,20 +349,22 @@ const PropertyList: React.FC<PropertyListProps> = ({
                                                     }
                                                 }}
                                             >
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     <span style={{
-                                                        width: '8px',
-                                                        height: '8px',
+                                                        width: '6px',
+                                                        height: '6px',
                                                         borderRadius: '50%',
                                                         backgroundColor: group.status.color,
-                                                        flexShrink: 0
+                                                        flexShrink: 0,
+                                                        opacity: 0.8
                                                     }} />
-                                                    <span style={{ color: '#374151' }}>{property.address}</span>
+                                                    <span style={{ color: '#334155', fontWeight: 500 }}>{property.address}</span>
                                                 </div>
                                                 <span style={{
-                                                    fontSize: '0.6rem',
-                                                    color: '#94a3b8',
-                                                    textTransform: 'uppercase'
+                                                    fontSize: '0.65rem',
+                                                    color: '#9ca3af',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.02em'
                                                 }}>
                                                     {property.type}
                                                 </span>

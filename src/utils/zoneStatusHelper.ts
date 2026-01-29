@@ -24,11 +24,11 @@ export interface ZoneStatus {
     pastSnow24h: number;
 }
 
-// Color constants
+// Color constants - Muted palette for modern SaaS look
 const COLORS = {
-    GREEN: '#22c55e',   // Clear/Trace
-    ORANGE: '#f59e0b',  // Residential
-    RED: '#ef4444',     // Commercial
+    GREEN: '#4ade80',   // Clear/Trace - softer green (was #22c55e)
+    ORANGE: '#fb923c',  // Residential - warm orange (was #f59e0b)
+    RED: '#f87171',     // Commercial - softer red (was #ef4444)
     GRAY: '#94a3b8'     // Non-service
 };
 

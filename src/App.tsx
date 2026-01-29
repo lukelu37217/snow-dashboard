@@ -390,6 +390,7 @@ function App() {
             selectedPropertyId={selectedPropertyId}
             onSelectProperty={handlePropertySelect}
             syntheticZones={syntheticZones}
+            isMobile={true}
           />
         </div>
         
@@ -411,6 +412,8 @@ function App() {
           onClearSelection={handleCloseDetail}
           forecast={cityWeather?.forecast || null}
           ecForecast={ecForecast}
+          notificationsEnabled={notificationsEnabled}
+          onToggleNotifications={handleNotificationToggle}
         />
       </div>
     );

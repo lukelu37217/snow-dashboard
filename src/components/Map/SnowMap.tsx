@@ -39,6 +39,7 @@ interface SnowMapProps {
     selectedPropertyId?: string | null; // Track selected property for highlighting
     onSelectProperty?: (property: ClientProperty) => void; // Property click handler
     syntheticZones?: SyntheticZone[]; // NEW: Bubble zones for orphan addresses
+    isMobile?: boolean; // Mobile detection for responsive UI
 }
 
 // RainViewer API Types
@@ -98,7 +99,8 @@ const RadarTimelineSlider: React.FC<{
     radarLayers: L.TileLayer[];
     isPlaying: boolean;
     onPlayPauseToggle: () => void;
-}> = ({ frames, currentFrame, onFrameChange, radarLayers, isPlaying, onPlayPauseToggle }) => {
+    isMobile?: boolean;
+}> = ({ frames, currentFrame, onFrameChange, radarLayers, isPlaying, onPlayPauseToggle, isMobile = false }) => {
     const [isDragging, setIsDragging] = useState(false);
 
     const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -135,11 +137,15 @@ const RadarTimelineSlider: React.FC<{
 
     const isForecast = currentFrame >= frames.length - 3;
 
+    // Mobile: position at top-left below header; Desktop: bottom-left above forecast bar
+    const positionStyle = isMobile 
+        ? { top: '130px', left: '10px', bottom: 'auto' }
+        : { bottom: '240px', left: '10px', top: 'auto' };
+
     return (
         <div style={{
             position: 'absolute',
-            bottom: '240px',
-            left: '10px',
+            ...positionStyle,
             backgroundColor: 'rgba(255,255,255,0.95)',
             color: '#1f2937',
             padding: '12px 16px',
@@ -150,7 +156,8 @@ const RadarTimelineSlider: React.FC<{
             fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
             border: '1px solid rgba(0,0,0,0.1)',
-            minWidth: '200px'
+            minWidth: '200px',
+            maxWidth: isMobile ? 'calc(100vw - 80px)' : '280px'
         }}>
             {/* Header Row */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -238,7 +245,7 @@ const RadarTimelineSlider: React.FC<{
 type RadarLayerMode = 'radar' | 'satellite' | 'both';
 
 // RainViewer Radar Layer Component with Satellite Support
-const RainViewerRadar: React.FC<{ enabled: boolean }> = ({ enabled }) => {
+const RainViewerRadar: React.FC<{ enabled: boolean; isMobile?: boolean }> = ({ enabled, isMobile = false }) => {
     const map = useMap();
     const radarLayersRef = useRef<L.TileLayer[]>([]);
     const satelliteLayersRef = useRef<L.TileLayer[]>([]);
@@ -533,6 +540,7 @@ const RainViewerRadar: React.FC<{ enabled: boolean }> = ({ enabled }) => {
                     radarLayers={radarLayersRef.current}
                     isPlaying={isPlaying}
                     onPlayPauseToggle={handlePlayPauseToggle}
+                    isMobile={isMobile}
                 />
             )}
 
@@ -540,7 +548,7 @@ const RainViewerRadar: React.FC<{ enabled: boolean }> = ({ enabled }) => {
             {!isLoading && (
                 <div style={{
                     position: 'absolute',
-                    top: '70px',
+                    top: isMobile ? '70px' : '70px',
                     left: '16px',
                     backgroundColor: 'rgba(255,255,255,0.95)',
                     borderRadius: '8px',
@@ -781,44 +789,43 @@ const DistrictLayer: React.FC<{
                 if (isSelected) {
                     return {
                         fillColor: color,
-                        weight: 4,
+                        weight: 3,
                         opacity: 1,
                         color: '#06b6d4', // Cyan highlight
-                        fillOpacity: 0.5,
+                        fillOpacity: 0.4,
                         pane: 'districtPane'
                     };
                 }
                 return {
                     fillColor: color,
-                    weight: 1,
-                    opacity: 0.6,
-                    color: '#94a3b8', // Slate gray border
-                    dashArray: '4, 4', // Dashed border to distinguish
-                    fillOpacity: 0.25, // Lighter than service zones
+                    weight: 0.5,
+                    opacity: 0.4,
+                    color: color, // Match border to fill for seamless look
+                    fillOpacity: 0.2, // Lighter than service zones
                     pane: 'districtPane'
                 };
             }
             
-            // TIER 1: MY SERVICE ZONES (Active Territory) - Bright and prominent
-            // SELECTED ZONE: Thick cyan glow border
+            // TIER 1: MY SERVICE ZONES (Active Territory) - Seamless with selection highlight
+            // SELECTED ZONE: Cyan glow border
             if (isSelected) {
                 return {
                     fillColor: color,
-                    weight: 5, // Extra thick for selected
+                    weight: 3, // Visible selection border
                     opacity: 1,
                     color: '#06b6d4', // Cyan highlight
-                    fillOpacity: 0.7, // More opaque when selected
+                    fillOpacity: 0.55, // Slightly more opaque when selected
                     pane: 'districtPane'
                 };
             }
 
-            // Normal SERVICE ZONE style - Bright and prominent
+            // Normal SERVICE ZONE style - Seamless look with matching border
             return {
                 fillColor: color,
-                weight: 2, // Thick white border to pop
-                opacity: 1,
-                color: '#ffffff', // Solid white border
-                fillOpacity: 0.6, // Solid, easy to see
+                weight: 1, // Thin border to reduce gaps
+                opacity: 0.8,
+                color: color, // Match border to fill color for seamless appearance
+                fillOpacity: 0.45, // Slightly transparent for muted look
                 pane: 'districtPane'
             };
         };
@@ -852,21 +859,19 @@ const DistrictLayer: React.FC<{
                     mouseover: (e) => {
                         if (feature.properties.id !== selectedZoneId) {
                             e.target.setStyle({ 
-                                fillOpacity: 0.4, 
-                                weight: 2, 
-                                color: '#64748b' 
+                                fillOpacity: 0.3, 
+                                weight: 1
                             });
                         }
                     },
                     mouseout: (e) => {
                         if (feature.properties.id === selectedZoneId) {
-                            e.target.setStyle({ weight: 4, color: '#06b6d4', fillOpacity: 0.5 });
+                            e.target.setStyle({ weight: 3, color: '#06b6d4', fillOpacity: 0.4 });
                         } else {
                             e.target.setStyle({ 
-                                fillOpacity: 0.25, 
-                                weight: 1, 
-                                color: '#94a3b8',
-                                dashArray: '4, 4'
+                                fillOpacity: 0.2, 
+                                weight: 0.5, 
+                                color: color
                             });
                         }
                     }
@@ -902,15 +907,15 @@ const DistrictLayer: React.FC<{
                 click: () => onSelectNeighborhood(feature),
                 mouseover: (e) => {
                     if (feature.properties.id !== selectedZoneId) {
-                        e.target.setStyle({ weight: 3, color: '#ffffff', fillOpacity: 0.7 });
+                        e.target.setStyle({ weight: 2, fillOpacity: 0.55 });
                     }
                     e.target.bringToFront();
                 },
                 mouseout: (e) => {
                     if (feature.properties.id === selectedZoneId) {
-                        e.target.setStyle({ weight: 5, color: '#06b6d4', fillOpacity: 0.7 });
+                        e.target.setStyle({ weight: 3, color: '#06b6d4', fillOpacity: 0.55 });
                     } else {
-                        e.target.setStyle({ weight: 2, color: '#ffffff', fillOpacity: 0.6 });
+                        e.target.setStyle({ weight: 1, color, fillOpacity: 0.45 });
                     }
                 }
             });
@@ -1169,7 +1174,8 @@ const SnowMap: React.FC<SnowMapProps> = ({
     selectedZoneId,
     selectedPropertyId,
     onSelectProperty,
-    syntheticZones = []
+    syntheticZones = [],
+    isMobile = false
 }) => {
     return (
         <MapContainer
@@ -1181,14 +1187,15 @@ const SnowMap: React.FC<SnowMapProps> = ({
             <CustomPanesSetup />
             <MapRefExposer mapRef={mapRef} />
 
-            {/* Layer 1: Light Base Map (CartoDB Positron) */}
+            {/* Layer 1: Light Base Map (CartoDB Positron - No Labels for cleaner look) */}
             <TileLayer
                 attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
+                className="muted-basemap"
             />
 
             {/* Layer 2: RainViewer Radar (radarPane, zIndex: 400) */}
-            <RainViewerRadar enabled={showRadar} />
+            <RainViewerRadar enabled={showRadar} isMobile={isMobile} />
 
             {/* Layer 2.5: Western Sector Background Fill (reduces visual gaps) */}
             <WesternSectorBackground />
@@ -1299,6 +1306,13 @@ const SnowMap: React.FC<SnowMapProps> = ({
                 .property-tooltip::before { display: none !important; }
                 .leaflet-container { background: #f8fafc; }
                 .radar-tile-layer { transition: opacity 0.3s ease-out; }
+                /* Muted basemap - desaturate for cleaner data visualization */
+                .muted-basemap {
+                    filter: saturate(0.4) brightness(1.02) !important;
+                }
+                .leaflet-tile-pane {
+                    filter: saturate(0.5) brightness(1.03);
+                }
                 .radar-spinner {
                     width: 16px;
                     height: 16px;

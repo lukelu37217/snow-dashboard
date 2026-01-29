@@ -57,6 +57,31 @@ const CloudIcon: React.FC<{ size?: number; color?: string }> = ({ size = 20, col
   </svg>
 );
 
+const BellIcon: React.FC<{ size?: number; color?: string }> = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2">
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+  </svg>
+);
+
+const BellOffIcon: React.FC<{ size?: number; color?: string }> = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2">
+    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    <path d="M18.63 13A17.89 17.89 0 0 1 18 8" />
+    <path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14" />
+    <path d="M18 8a6 6 0 0 0-9.33-5" />
+    <line x1="1" y1="1" x2="23" y2="23" />
+  </svg>
+);
+
+const WindIcon: React.FC<{ size?: number; color?: string }> = ({ size = 14, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2" />
+    <path d="M9.6 4.6A2 2 0 1 1 11 8H2" />
+    <path d="M12.6 19.4A2 2 0 1 0 14 16H2" />
+  </svg>
+);
+
 // 天气图标根据WMO代码
 const getWeatherIcon = (code: number | undefined, size: number = 24, color: string = '#6b7280') => {
   if (!code) return <CloudIcon size={size} color={color} />;
@@ -113,6 +138,9 @@ interface MobileDriverModeFinalProps {
   onClearSelection: () => void;
   forecast?: DetailedForecast | null;
   ecForecast?: ECForecastData | null;
+  // Notification props
+  notificationsEnabled?: boolean;
+  onToggleNotifications?: () => void;
 }
 
 /**
@@ -126,7 +154,9 @@ const TopBarWithForecast: React.FC<{
   forecast: DetailedForecast | null;
   ecForecast: ECForecastData | null;
   onHeightChange?: (height: number) => void;
-}> = ({ temperature, maxSnow, isSnowing, onRefresh, forecast, ecForecast, onHeightChange }) => {
+  notificationsEnabled?: boolean;
+  onToggleNotifications?: () => void;
+}> = ({ temperature, maxSnow, isSnowing, onRefresh, forecast, ecForecast, onHeightChange, notificationsEnabled = false, onToggleNotifications }) => {
   const [forecastExpanded, setForecastExpanded] = useState(false);
   const [forecastMode, setForecastMode] = useState<'24h' | '7d'>('24h');
 
@@ -231,8 +261,34 @@ const TopBarWithForecast: React.FC<{
           </div>
         </div>
 
-        {/* 右侧: 预报按钮 + 刷新 */}
+        {/* 右侧: 通知 + 预报按钮 + 刷新 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* 通知按钮 */}
+          {onToggleNotifications && (
+            <button
+              onClick={onToggleNotifications}
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                border: 'none',
+                backgroundColor: notificationsEnabled ? '#dbeafe' : '#f3f4f6',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                touchAction: 'manipulation'
+              }}
+              title={notificationsEnabled ? 'Disable notifications' : 'Enable notifications'}
+            >
+              {notificationsEnabled 
+                ? <BellIcon size={20} color="#3b82f6" />
+                : <BellOffIcon size={20} color="#6b7280" />
+              }
+            </button>
+          )}
+
           <button
             onClick={() => setForecastExpanded(!forecastExpanded)}
             style={{
@@ -854,7 +910,26 @@ const BottomSheet: React.FC<{
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '12px' }}>
+                        {/* Drift Risk Warning */}
+                        {group.weatherData?.driftRisk && (group.weatherData.driftRisk.level === 'high' || group.weatherData.driftRisk.level === 'moderate') && (
+                          <div 
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              backgroundColor: group.weatherData.driftRisk.level === 'high' ? '#fef2f2' : '#fffbeb',
+                              color: group.weatherData.driftRisk.level === 'high' ? '#dc2626' : '#d97706',
+                              fontSize: '0.65rem',
+                              fontWeight: 600
+                            }}
+                          >
+                            <WindIcon size={12} color={group.weatherData.driftRisk.level === 'high' ? '#dc2626' : '#d97706'} />
+                            Drift
+                          </div>
+                        )}
                         <div style={{
                           padding: '6px 12px',
                           borderRadius: '6px',
@@ -949,6 +1024,8 @@ const MobileDriverModeFinal: React.FC<MobileDriverModeFinalProps> = (props) => {
         forecast={props.forecast || null}
         ecForecast={props.ecForecast || null}
         onHeightChange={setHeaderHeight}
+        notificationsEnabled={props.notificationsEnabled}
+        onToggleNotifications={props.onToggleNotifications}
       />
 
       <BottomSheet

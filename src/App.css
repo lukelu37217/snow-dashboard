@@ -1,10 +1,24 @@
-/* Apple-style Glassmorphism Design System */
+/* Modern SaaS Dashboard Design System */
 
 /* Typography - San Francisco/Inter style */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 * {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Modern Text Color System - Deep gray instead of pure black */
+:root {
+    --text-primary: #1e293b;    /* Slate 800 - Primary text */
+    --text-secondary: #475569;  /* Slate 600 - Secondary text */
+    --text-muted: #94a3b8;      /* Slate 400 - Muted/helper text */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;    /* Slate 50 */
+    --bg-tertiary: #f1f5f9;     /* Slate 100 */
+    --border-light: #e2e8f0;    /* Slate 200 */
+    --border-default: #cbd5e1;  /* Slate 300 */
 }
 
 /* Glassmorphism Base Classes */
@@ -136,7 +150,7 @@
     background: rgba(255, 255, 255, 0.3);
 }
 
-/* Typography Hierarchy */
+/* Typography Hierarchy - Use font weight for emphasis, not color */
 .metric-number {
     font-size: 2.5rem;
     font-weight: 700;
@@ -148,9 +162,55 @@
 .metric-label {
     font-size: 0.75rem;
     font-weight: 500;
-    color: var(--text-tertiary);
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+}
+
+/* Heading Styles */
+.heading-lg {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+
+.heading-md {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+.heading-sm {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+/* Body Text */
+.body-text {
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.body-small {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+/* Spacing Utilities */
+.spacing-relaxed {
+    padding: 16px 20px;
+}
+
+.spacing-compact {
+    padding: 10px 14px;
 }
 
 /* Smooth transitions for all interactive elements */
@@ -397,11 +457,25 @@ button:focus-visible, a:focus-visible {
     border-left: 3px solid #10b981;
 }
 
-/* Desktop sidebar - remove glassmorphism, use solid background */
+/* Desktop sidebar - clean, minimal look */
 .sidebar-desktop {
-    background: #ffffff !important;
+    background: var(--bg-secondary) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
+}
+
+/* Card styles - subtle shadows and borders */
+.card-subtle {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.card-elevated {
+    background: var(--bg-primary);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 /* Status-based shadow colors */
